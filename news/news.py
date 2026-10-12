@@ -45,7 +45,9 @@ DEFAULTS = {
         "Dev-Blog|https://www.eveonline.com/rss/dev-blogs;"
         "Patch Notes|https://www.eveonline.com/rss/patch-notes;"
         "EVE Online|https://www.eveonline.com/rss;"
-        r"Massively OP|https://massivelyop.com/tag/eve-online/feed/|\bEVE\b|New Eden|\bCCP\b"
+        r"Massively OP|https://massivelyop.com/tag/eve-online/feed/|\bEVE\b|New Eden|\bCCP\b;"
+        r"Mein-MMO|https://mein-mmo.de/feed/|EVE Online|New Eden|\bCCP Games\b;"
+        r"GameStar|https://www.gamestar.de/news/rss/news.rss|EVE Online|New Eden|\bCCP Games\b"
     ),
     "NEWS_OUT": str(HOME / "server/site/news.json"),
     "NEWS_STATE": str(HOME / "repos/news-state.json"),
