@@ -441,6 +441,40 @@
             margin-bottom: 1rem;
         }
 
+        /* ===== News: Sprache, Bild, Fußzeile ===== */
+        .news-tools { display: flex; align-items: center; gap: 0.9rem; }
+        .lang-switch { display: inline-flex; border: 1px solid var(--eve-btn-border); border-radius: 9999px; overflow: hidden; }
+        .lang-switch button {
+            font: 700 0.7rem/1 var(--font-mono);
+            letter-spacing: 1px;
+            color: var(--eve-text-muted);
+            background: transparent;
+            border: 0;
+            padding: 0.4rem 0.75rem;
+            cursor: pointer;
+        }
+        .lang-switch button[aria-pressed="true"] { color: #fff; background: var(--eve-btn-bg); box-shadow: inset 0 1px 0 rgba(255,255,255,0.3); }
+        .lang-switch button:focus-visible { outline: 2px solid var(--eve-cyan); outline-offset: -2px; }
+
+        .news-img {
+            height: 190px;
+            margin: -1.75rem -1.75rem 1.25rem;
+            border-radius: 8px 8px 0 0;
+            background: center / cover no-repeat;
+            mask-image: linear-gradient(180deg, #000 55%, transparent);
+            -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+        }
+        .news-card h2 a, .news-card h3 a { color: inherit; text-decoration: none; }
+        .news-card h2 a:hover, .news-card h3 a:hover { color: var(--eve-cyan); }
+        .news-card .eve-btn { align-self: flex-start; }
+        .news-foot {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--eve-text-muted);
+            opacity: 0.75;
+            margin-top: 1rem;
+        }
+
         .col-lead {
             grid-column: span 8;
             background: linear-gradient(135deg, rgba(16, 38, 70, 0.85) 0%, rgba(8, 18, 36, 0.9) 100%);
@@ -578,40 +612,29 @@
             </div>
         </section>
 
-        <!-- News Dispatch (Zeitungsraster) -->
-        <section class="eve-panel">
+        <!-- News Dispatch (Zeitungsraster) – Inhalte kommen aus news.json (News-Bot auf dem Server) -->
+        <section class="eve-panel" id="news">
             <div class="eve-panel-header">
-                <div class="eve-panel-title">EVE ONLINE &amp; TECH NEWS</div>
-                <div class="eve-panel-meta">AUSGABE: OKTOBER 2026</div>
+                <div class="eve-panel-title">EVE ONLINE NEWS</div>
+                <div class="news-tools">
+                    <span class="eve-panel-meta" id="news-edition"></span>
+                    <div class="lang-switch" role="group" aria-label="Sprache / Language">
+                        <button type="button" data-lang="de">DE</button>
+                        <button type="button" data-lang="en">EN</button>
+                    </div>
+                </div>
             </div>
 
-            <div class="editorial-grid">
-                <!-- Hauptmeldung (2/3 Breite) -->
+            <div class="editorial-grid" id="news-grid">
                 <article class="news-card col-lead">
                     <div>
-                        <div class="news-meta">
-                            <span>EVE ONLINE // TOP-STORY</span>
-                            <span>VOR 2 STD.</span>
-                        </div>
-                        <h2>Titel der Hauptmeldung: Großes Update verändert Alliance-Kriege im Nullsec</h2>
-                        <p>Hier steht der einleitende Fließtext für die wichtigste Nachricht des Tages. Das Layout hebt diesen Artikel durch die doppelte Breite und die leuchtende Akzentleiste am linken Rand direkt wie eine Schlagzeile auf Seite 1 hervor.</p>
+                        <div class="news-meta"><span>NEWS // STANDBY</span></div>
+                        <h2>Nachrichtenkanal wird kalibriert …</h2>
+                        <p>Sobald der News-Bot seine ersten Meldungen empfangen hat, erscheinen sie hier.</p>
                     </div>
-                    <div><a href="#" class="eve-btn">WEITERLESEN</a></div>
-                </article>
-
-                <!-- Seitenmeldung (1/3 Breite) – Platzhalter -->
-                <article class="news-card col-side">
-                    <div>
-                        <div class="news-meta">
-                            <span>TECH // MELDUNG</span>
-                            <span>HEUTE</span>
-                        </div>
-                        <h3>Titel einer Seitenmeldung</h3>
-                        <p>Platzhalter für eine kürzere Nachricht in der Seitenspalte.</p>
-                    </div>
-                    <div><a href="#" class="eve-btn">WEITERLESEN</a></div>
                 </article>
             </div>
+            <div class="news-foot" id="news-foot"></div>
         </section>
 
         <footer>
@@ -623,5 +646,95 @@
         </footer>
     </div>
 
+    <script>
+    /* News aus news.json rendern (schreibt der News-Bot auf dem Server stündlich) */
+    (() => {
+        const T = {
+            de: { more: "WEITERLESEN", top: "TOP-STORY", edition: "AUSGABE", ago: (n, u) => `VOR ${n} ${u}`,
+                  units: ["MIN.", "STD.", "TAGEN"], unit1: ["MIN.", "STD.", "TAG"], now: "GERADE EBEN",
+                  foot: (t, ai) => `Kurzfassungen ${ai ? "KI-generiert " : ""}aus den offiziellen EVE-Online-Feeds · Stand ${t} · Originalartikel über „Weiterlesen“`,
+                  empty: "Noch keine Meldungen – der News-Bot meldet sich bald." },
+            en: { more: "READ MORE", top: "TOP STORY", edition: "EDITION", ago: (n, u) => `${n} ${u} AGO`,
+                  units: ["MIN", "HRS", "DAYS"], unit1: ["MIN", "HR", "DAY"], now: "JUST NOW",
+                  foot: (t, ai) => `Summaries ${ai ? "AI-generated " : ""}from the official EVE Online feeds · updated ${t} · full articles via “Read more”`,
+                  empty: "No news yet – the news bot will check in soon." },
+        };
+        const grid = document.getElementById("news-grid");
+        const foot = document.getElementById("news-foot");
+        const edition = document.getElementById("news-edition");
+        const buttons = document.querySelectorAll(".lang-switch button");
+        let data = null;
+        let lang = "de";
+        try { lang = localStorage.getItem("homestation.lang") || (navigator.language || "de").slice(0, 2); } catch { /* egal */ }
+        if (!T[lang]) lang = "en";
+
+        const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+        const safeUrl = (u) => { try { const x = new URL(u); return x.protocol === "https:" ? x.href : null; } catch { return null; } };
+
+        function ago(iso) {
+            const t = T[lang], s = (Date.now() - new Date(iso)) / 1000;
+            if (!iso || isNaN(s)) return "";
+            if (s < 120) return t.now;
+            const [n, i] = s < 3600 ? [Math.floor(s / 60), 0] : s < 86400 ? [Math.floor(s / 3600), 1] : [Math.floor(s / 86400), 2];
+            return t.ago(n, (n === 1 ? t.unit1 : t.units)[i]);
+        }
+
+        const layout = (i) => i === 0 ? "col-lead" : i === 1 ? "col-side" : "col-4";
+
+        function render() {
+            const t = T[lang];
+            buttons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+            document.documentElement.lang = lang;
+            if (!data) return;
+            const items = (data.items || []).slice(0, 8);
+            if (!items.length) { grid.replaceChildren(el("p", "news-foot", t.empty)); return; }
+
+            grid.replaceChildren(...items.map((it, i) => {
+                const txt = it[lang] || it.de || it.en;
+                const url = safeUrl(it.url);
+                const card = el("article", "news-card " + layout(i));
+                const body = el("div");
+                const img = i === 0 && safeUrl(it.image);
+                if (img) { const d = el("div", "news-img"); d.style.backgroundImage = `url("${img}")`; body.append(d); }
+                const meta = el("div", "news-meta");
+                const src = (it.source || "EVE").toUpperCase(), cat = (it.category || "").toUpperCase();
+                const tag = i === 0 ? t.top : (cat && !src.includes(cat) && !cat.includes(src) ? cat : "");
+                meta.append(el("span", null, tag ? `${src} // ${tag}` : src),
+                            el("span", null, ago(it.date)));
+                const h = el(i === 0 ? "h2" : "h3");
+                if (url) { const a = el("a", null, txt.title); a.href = url; a.target = "_blank"; a.rel = "noopener"; h.append(a); }
+                else h.textContent = txt.title;
+                body.append(meta, h, el("p", null, txt.teaser));
+                card.append(body);
+                if (url) {
+                    const wrap = el("div"), a = el("a", "eve-btn", t.more + " ↗");
+                    a.href = url; a.target = "_blank"; a.rel = "noopener"; wrap.append(a); card.append(wrap);
+                }
+                return card;
+            }));
+
+            const gen = new Date(data.generated);
+            const loc = lang === "de" ? "de-DE" : "en-GB";
+            edition.textContent = `${t.edition}: ${gen.toLocaleDateString(loc, { month: "long", year: "numeric" }).toUpperCase()}`;
+            foot.textContent = t.foot(gen.toLocaleString(loc, { dateStyle: "short", timeStyle: "short" }), data.provider && data.provider !== "none");
+        }
+
+        buttons.forEach(b => b.addEventListener("click", () => {
+            lang = b.dataset.lang;
+            try { localStorage.setItem("homestation.lang", lang); } catch { /* egal */ }
+            render();
+        }));
+
+        async function load() {
+            try {
+                const r = await fetch("news.json", { cache: "no-cache" });
+                if (r.ok) data = await r.json();
+            } catch { /* news.json fehlt noch – Standby-Karte bleibt */ }
+            render();
+        }
+        load();
+        setInterval(load, 15 * 60 * 1000);
+    })();
+    </script>
 </body>
 </html>

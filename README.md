@@ -32,3 +32,14 @@ Hinweis: Dateien, die aus `site/` gelöscht werden, bleiben in `~/server/site` l
 
 `deploy/sync-tool.sh <repo> <pfad>` spiegelt den Branch `deploy` nach `~/server/site/<pfad>` (Cron, jede Minute).
 GitHub Pages läuft parallel weiter.
+
+## News-Bot
+
+`news/news.py` holt stündlich die offiziellen EVE-Feeds (News, Dev-Blogs, Patch Notes), lässt für **neue** Einträge
+von einer KI (Gemini oder Claude, eigener API-Key) kurze Teaser auf Deutsch und Englisch schreiben und legt
+`news.json` in den Webroot. Die Seite lädt sie und zeigt sie im Zeitungsraster (DE/EN-Umschalter).
+
+- Config: `~/.config/lincolnsoft/news.env` (Vorlage: `news/news.env.example`, `chmod 600`, nie ins Repo)
+- Test: `python3 news/news.py --dry-run`
+- Ohne KI: `python3 news/news.py --no-ai`
+- Log: `~/repos/news.log`
