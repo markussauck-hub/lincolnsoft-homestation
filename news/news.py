@@ -26,6 +26,7 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -46,6 +47,8 @@ DEFAULTS = {
     ),
     "NEWS_OUT": str(HOME / "server/site/news.json"),
     "NEWS_STATE": str(HOME / "repos/news-state.json"),
+    "NEWS_IMG_DIR": str(HOME / "server/site/news-img"),   # Artikelbilder lokal (Besucher laden nichts von CCP)
+    "NEWS_IMAGES": "1",                                     # 0 = keine Bilder holen
     "NEWS_MAX_ITEMS": "12",          # so viele Einträge landen in news.json
     "NEWS_MAX_NEW_PER_RUN": "8",     # Obergrenze KI-Aufrufe pro Lauf
     "NEWS_MAX_AGE_DAYS": "60",       # ältere Einträge werden ignoriert
@@ -202,6 +205,59 @@ def fetch_feeds(cfg, verbose=False):
     if failed and (verbose or not out):                        # im Normalbetrieb nur loggen, wenn gar nichts kam
         log("Feed-Fehler: " + "; ".join(failed))
     return out
+
+
+# --------------------------------------------------------------------------- Bilder
+OG_RE = [
+    re.compile(r'<meta[^>]+(?:property|name)=["\'](?:og:image|twitter:image)(?::src)?["\'][^>]*content=["\']([^"\']+)', re.I),
+    re.compile(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]*(?:property|name)=["\'](?:og:image|twitter:image)(?::src)?["\']', re.I),
+]
+IMG_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "image/avif": ".avif"}
+
+
+def find_article_image(url):
+    """og:image / twitter:image der Artikelseite."""
+    page = http(url, timeout=20)[:600_000].decode("utf-8", "replace")
+    for rx in OG_RE:
+        m = rx.search(page)
+        if m:
+            img = html.unescape(m.group(1)).strip()
+            return urllib.parse.urljoin(url, img)
+    return None
+
+
+def cache_image(img_url, img_dir):
+    """Bild einmal herunterladen und lokal ablegen -> relativer Pfad für die Seite."""
+    import hashlib
+    u = urllib.parse.urlsplit(img_url)
+    if u.scheme not in ("http", "https"):
+        return None
+    if u.hostname and u.hostname.endswith("ctfassets.net"):          # CCPs Bild-CDN: kleinere Version anfordern
+        q = urllib.parse.parse_qs(u.query)
+        q.update({"w": ["960"], "fm": ["jpg"], "q": ["75"]})
+        img_url = urllib.parse.urlunsplit(u._replace(query=urllib.parse.urlencode(q, doseq=True)))
+    req = urllib.request.Request(img_url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        ctype = (r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        data = r.read(4_000_001)
+    if ctype not in IMG_TYPES or len(data) > 4_000_000 or len(data) < 500:
+        return None
+    name = hashlib.sha1(img_url.encode()).hexdigest()[:16] + IMG_TYPES[ctype]
+    d = Path(img_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / name).write_bytes(data)
+    return f"{d.name}/{name}"
+
+
+def get_image(cfg, item):
+    if cfg.get("NEWS_IMAGES", "1") == "0":
+        return None
+    try:
+        src = item.get("image") or find_article_image(item["url"])
+        return cache_image(src, cfg["NEWS_IMG_DIR"]) if src else None
+    except Exception as ex:
+        log(f"  Bild für '{item['title']}' nicht geladen: {type(ex).__name__}: {ex}")
+        return None
 
 
 # --------------------------------------------------------------------------- KI
@@ -362,12 +418,22 @@ def main():
             except Exception as ex:
                 log(f"KI-Fehler bei '{it['title']}': {ex} – nutze Feed-Text, KI für diesen Lauf aus")
                 gen, ai_down = fallback(it), True
+        prev_img = (state.get(it["url"]) or {}).get("image")
+        img = prev_img if prev_img and (Path(cfg["NEWS_IMG_DIR"]) / Path(prev_img).name).exists() else get_image(cfg, it)
         state[it["url"]] = {
             **gen,
-            "url": it["url"], "source": it["source"], "image": it["image"],
+            "url": it["url"], "source": it["source"], "image": img, "img_checked": True,
             "date": it["date"].isoformat() if it["date"] else None,
             "orig_title": it["title"],
         }
+
+    # Bereits verarbeitete Einträge ohne Bildprüfung (ältere Versionen) einmalig nachrüsten
+    for it in newest:
+        e = state.get(it["url"])
+        if e is not None and not e.get("img_checked"):
+            if not e.get("image"):
+                e["image"] = get_image(cfg, it)
+            e["img_checked"] = True
 
     # news.json: neueste Einträge, Top-Story = wichtigste der letzten 7 Tage (sonst neueste)
     entries = [state[i["url"]] for i in newest if i["url"] in state]
@@ -391,11 +457,18 @@ def main():
 
     # State schlank halten: nur, was noch in den Feeds auftaucht
     state = {u: v for u, v in state.items() if u in feed}
+    used = {Path(v["image"]).name for v in state.values() if v.get("image")}
+    img_dir = Path(cfg["NEWS_IMG_DIR"])
+    if img_dir.is_dir():
+        for f in img_dir.iterdir():
+            # nur eigene Dateien (16 Hex-Zeichen + Bildendung) – schützt bei falsch gesetztem NEWS_IMG_DIR
+            if f.is_file() and f.name not in used and re.fullmatch(r"[0-9a-f]{16}\.(jpg|png|webp|gif|avif)", f.name):
+                f.unlink()
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
 
     if done or todo:
-        log(f"news.json: {len(ordered)} Einträge, {done} neu von der KI ({cfg['NEWS_PROVIDER']}), Top: {top['de']['title']}")
+        log(f"news.json: {len(ordered)} Einträge, {done} neu verarbeitet (KI: {cfg['NEWS_PROVIDER']}), Top: {top['de']['title']}")
     return 0
 
 

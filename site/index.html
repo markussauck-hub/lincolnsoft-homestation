@@ -457,12 +457,34 @@
         .lang-switch button:focus-visible { outline: 2px solid var(--eve-cyan); outline-offset: -2px; }
 
         .news-img {
-            height: 190px;
-            margin: -1.75rem -1.75rem 1.25rem;
-            border-radius: 8px 8px 0 0;
+            position: relative;
+            height: 120px;
+            margin: -1.25rem -1.25rem 1rem;
+            border-radius: 9px 9px 0 0;
             background: center / cover no-repeat;
-            mask-image: linear-gradient(180deg, #000 55%, transparent);
-            -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+            mask-image: linear-gradient(180deg, #000 60%, transparent);
+            -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent);
+        }
+        .col-lead .news-img { height: 210px; margin: -1.75rem -1.75rem 1.25rem; border-radius: 8px 8px 0 0; }
+        /* Ohne Artikelbild: Sternenfeld-Kopfleiste, Farbton je nach Kategorie */
+        .news-img--none {
+            background:
+                radial-gradient(1.5px 1.5px at 12% 30%, #fff, transparent),
+                radial-gradient(1px 1px at 38% 70%, rgba(255,255,255,.8), transparent),
+                radial-gradient(1.5px 1.5px at 64% 22%, #fff, transparent),
+                radial-gradient(1px 1px at 82% 58%, rgba(255,255,255,.7), transparent),
+                radial-gradient(1px 1px at 92% 18%, #fff, transparent),
+                radial-gradient(ellipse at 75% 35%, hsla(var(--hue, 200), 90%, 55%, .45), transparent 60%),
+                radial-gradient(ellipse at 20% 80%, hsla(calc(var(--hue, 200) + 40), 80%, 45%, .3), transparent 55%),
+                linear-gradient(135deg, #07142a, #0b1f3d);
+        }
+        .news-img--none::after {
+            content: attr(data-label);
+            position: absolute;
+            left: 1.25rem; bottom: 1.9rem;
+            font: 700 0.65rem/1 var(--font-mono);
+            letter-spacing: 3px;
+            color: hsla(var(--hue, 200), 100%, 82%, .75);
         }
         .news-card h2 a, .news-card h3 a { color: inherit; text-decoration: none; }
         .news-card h2 a:hover, .news-card h3 a:hover { color: var(--eve-cyan); }
@@ -679,6 +701,10 @@
             return t.ago(n, (n === 1 ? t.unit1 : t.units)[i]);
         }
 
+        // Bilder legt der News-Bot unter news-img/ ab (nur dieser relative Pfad ist erlaubt)
+        const localImg = (p) => /^news-img\/[0-9a-f]{16}\.(jpg|png|webp|gif|avif)$/.test(p || "") ? p : null;
+        const hue = (c) => ({ update: 195, patch: 160, "dev-blog": 265, event: 25, community: 320, esports: 0 })[(c || "").toLowerCase()] ?? 210;
+
         const layout = (i) => i === 0 ? "col-lead" : i === 1 ? "col-side" : "col-4";
 
         function render() {
@@ -694,8 +720,11 @@
                 const url = safeUrl(it.url);
                 const card = el("article", "news-card " + layout(i));
                 const body = el("div");
-                const img = i === 0 && safeUrl(it.image);
-                if (img) { const d = el("div", "news-img"); d.style.backgroundImage = `url("${img}")`; body.append(d); }
+                const img = localImg(it.image) || safeUrl(it.image);
+                const pic = el("div", "news-img" + (img ? "" : " news-img--none"));
+                if (img) pic.style.backgroundImage = `url("${img}")`;
+                else { pic.style.setProperty("--hue", hue(it.category)); pic.dataset.label = (it.category || it.source || "EVE").toUpperCase(); }
+                body.append(pic);
                 const meta = el("div", "news-meta");
                 const src = (it.source || "EVE").toUpperCase(), cat = (it.category || "").toUpperCase();
                 const tag = i === 0 ? t.top : (cat && !src.includes(cat) && !cat.includes(src) ? cat : "");
