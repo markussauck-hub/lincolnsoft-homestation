@@ -376,6 +376,20 @@
         }
         .tool-card--empty .tool-name { font-weight: 600; color: var(--eve-text-muted); }
 
+        /* Spiel-Kachel: etwas wärmer, mit Badge */
+        .tool-badge {
+            align-self: flex-start;
+            font: 700 0.6rem/1 var(--font-mono);
+            letter-spacing: 1.5px;
+            color: #ffb020;
+            border: 1px solid rgba(255, 176, 32, 0.5);
+            border-radius: 9999px;
+            padding: 0.25rem 0.55rem;
+            margin-bottom: 0.15rem;
+        }
+        .tool-card--game { border-color: rgba(255, 176, 32, 0.35); }
+        .tool-card--game:hover { border-color: #ffb020; box-shadow: 0 0 12px rgba(255, 176, 32, 0.35); }
+
         .tool-name {
             color: #ffffff;
             font-weight: 700;
@@ -615,10 +629,11 @@
                     <span class="tool-name">EVE Invention Helper</span>
                     <span class="tool-desc">Datacores, Skills &amp; Bauteile für T2-Invention</span>
                 </a>
-                <div class="tool-card tool-card--empty" aria-hidden="true">
-                    <span class="tool-name">Andockplatz 03</span>
-                    <span class="tool-desc">frei – Modul in Planung</span>
-                </div>
+                <a href="/snake-3/" class="tool-card tool-card--game">
+                    <span class="tool-badge">ALPHA · SPIEL</span>
+                    <span class="tool-name">GTA VII Entwickler zittern vor diesem neuen Spiel!</span>
+                    <span class="tool-desc">Snake 3 – direkt im Browser spielen</span>
+                </a>
                 <div class="tool-card tool-card--empty" aria-hidden="true">
                     <span class="tool-name">Andockplatz 04</span>
                     <span class="tool-desc">frei – Modul in Planung</span>

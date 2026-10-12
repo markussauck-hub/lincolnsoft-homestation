@@ -4,6 +4,7 @@
 #
 #   sync-tool.sh <github-repo> <pfad>          z. B.  sync-tool.sh markussauck-hub/eve-price-checker price-checker
 #   sync-tool.sh <github-repo> <pfad> --force  erzwingt das Kopieren
+#   BRANCH=main sync-tool.sh <github-repo> <pfad>   spiegelt einen anderen Branch (Standard: deploy)
 #
 # Läuft per Cron jede Minute, tut aber nur etwas, wenn es einen neuen Stand gibt.
 set -euo pipefail
@@ -18,7 +19,7 @@ FORCE="${3:-}"
 NAME="${REPO_SLUG##*/}"
 CACHE="$HOME/repos/deploy-cache/$NAME"
 TARGET="$HOME/server/site/$SUBPATH"
-BRANCH="deploy"
+BRANCH="${BRANCH:-deploy}"          # anderer Branch per Umgebungsvariable, z. B. BRANCH=main
 
 mkdir -p "$HOME/repos/deploy-cache"
 
