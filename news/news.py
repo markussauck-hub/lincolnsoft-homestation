@@ -262,23 +262,31 @@ def get_image(cfg, item):
 
 # --------------------------------------------------------------------------- KI
 PROMPT = """Du schreibst Kurzmeldungen für die Startseite eines privaten EVE-Online-Fanprojekts.
-Grundlage ist NUR dieser Feed-Eintrag – erfinde keine Fakten, Zahlen oder Daten hinzu.
+Grundlage sind NUR die folgenden Feed-Einträge – erfinde keine Fakten, Zahlen oder Daten hinzu.
 
-Quelle: {source}
-Titel: {title}
-Text: {summary}
+{entries}
 
-Antworte ausschließlich mit JSON in genau diesem Format:
-{{
-  "de": {{"title": "deutscher Titel, max. 90 Zeichen", "teaser": "2–3 Sätze auf Deutsch, eigene Worte, max. 320 Zeichen"}},
-  "en": {{"title": "English title, max 90 chars", "teaser": "2–3 sentences in English, own words, max 320 chars"}},
-  "category": "eines von: Update, Event, Patch, Dev-Blog, Community, Esports, Sonstiges",
-  "importance": 1-5
-}}
+Antworte ausschließlich mit einem JSON-Array, ein Objekt pro Eintrag, in genau diesem Format:
+[
+  {{
+    "id": <Nummer des Eintrags>,
+    "de": {{"title": "deutscher Titel, max. 90 Zeichen", "teaser": "2–3 Sätze auf Deutsch, eigene Worte, max. 320 Zeichen"}},
+    "en": {{"title": "English title, max 90 chars", "teaser": "2–3 sentences in English, own words, max 320 chars"}},
+    "category": "eines von: Update, Event, Patch, Dev-Blog, Community, Esports, Sonstiges",
+    "importance": 1-5
+  }}
+]
 
 Regeln: Teaser in eigenen Worten zusammenfassen, keine Sätze aus dem Text übernehmen. EVE-Begriffe
 (Nullsec, Capsuleer, Skill, Citadel usw.) und Eigennamen nicht übersetzen. importance 5 = großes
 Update/Expansion, 3 = normales Event, 1 = Kleinkram."""
+
+
+def build_prompt(items):
+    parts = []
+    for n, it in enumerate(items, 1):
+        parts.append(f"### Eintrag {n}\nQuelle: {it['source']}\nTitel: {it['title']}\nText: {(it['summary'] or '(kein Text)')[:1200]}")
+    return PROMPT.format(entries="\n\n".join(parts))
 
 
 def ask_gemini(cfg, prompt):
@@ -299,18 +307,14 @@ def ask_claude(cfg, prompt):
         raise RuntimeError("ANTHROPIC_API_KEY fehlt")
     res = json.loads(http("https://api.anthropic.com/v1/messages", {
         "model": cfg["CLAUDE_MODEL"],
-        "max_tokens": 800,
+        "max_tokens": 6000,
         "temperature": 0.4,
         "messages": [{"role": "user", "content": prompt}],
     }, {"x-api-key": key, "anthropic-version": "2023-06-01"}))
     return "".join(b.get("text", "") for b in res.get("content", []) if b.get("type") == "text")
 
 
-def parse_ai_json(text):
-    text = text.strip()
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
-    m = re.search(r"\{.*\}", text, re.S)
-    data = json.loads(m.group(0) if m else text)
+def clean_entry(data):
     for lang in ("de", "en"):
         d = data.get(lang) or {}
         if not d.get("title") or not d.get("teaser"):
@@ -325,26 +329,45 @@ def parse_ai_json(text):
     return data
 
 
-def summarize(cfg, item):
+def parse_ai_json(text):
+    """-> Liste von Einträgen (akzeptiert Array oder Einzelobjekt, auch in ```json-Blöcken)."""
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
+    m = re.search(r"[\[{].*[\]}]", text, re.S)
+    data = json.loads(m.group(0) if m else text)
+    return data if isinstance(data, list) else [data]
+
+
+def summarize_batch(cfg, items):
+    """Alle neuen Einträge in EINER KI-Anfrage. -> {url: gen} (fehlende Einträge fehlen im Ergebnis)."""
     provider = cfg["NEWS_PROVIDER"].lower()
     if provider == "none":
-        return fallback(item)
-    prompt = PROMPT.format(source=item["source"], title=item["title"], summary=item["summary"] or "(kein Text)")
+        return {it["url"]: fallback(it) for it in items}
     ask = ask_gemini if provider == "gemini" else ask_claude
+    prompt = build_prompt(items)
     last = None
-    for attempt in range(3):
+    for attempt in range(2):
         try:
-            return parse_ai_json(ask(cfg, prompt)) | {"ai": provider}
+            out = {}
+            for e in parse_ai_json(ask(cfg, prompt)):
+                try:
+                    n = int(e.get("id", 0))
+                    if 1 <= n <= len(items):
+                        out[items[n - 1]["url"]] = clean_entry(e) | {"ai": provider}
+                except (ValueError, TypeError) as ex:
+                    log(f"  KI-Antwort für Eintrag {e.get('id')} unbrauchbar: {ex}")
+            if not out:
+                raise ValueError("keine verwertbaren Einträge in der Antwort")
+            return out
         except urllib.error.HTTPError as ex:
-            last = f"HTTP {ex.code}: {ex.read()[:400].decode('utf-8', 'replace').strip()}"
-            log(f"  KI-Versuch {attempt + 1}/3 fehlgeschlagen: {last}")
-            if ex.code in (400, 401, 403, 404, 429):
-                break                   # Konfiguration/Key/Modell/Kontingent – Wiederholen bringt nichts
+            last = f"HTTP {ex.code}: {ex.read()[:300].decode('utf-8', 'replace').strip()}"
+            log(f"  KI-Versuch {attempt + 1}/2 fehlgeschlagen: {last}")
+            if ex.code != 503 and ex.code < 500:
+                break                   # 400/401/403/404/429: Wiederholen bringt nichts (429 = Kontingent)
         except Exception as ex:
             last = f"{type(ex).__name__}: {ex}"
-            log(f"  KI-Versuch {attempt + 1}/3 fehlgeschlagen: {last}")
-        if attempt < 2:
-            time.sleep(3 * (attempt + 1))
+            log(f"  KI-Versuch {attempt + 1}/2 fehlgeschlagen: {last}")
+        if attempt == 0:
+            time.sleep(20)
     raise RuntimeError(last)
 
 
@@ -372,9 +395,9 @@ def main():
         model = cfg["GEMINI_MODEL"] if prov == "gemini" else cfg["CLAUDE_MODEL"]
         log(f"KI-Test: Anbieter={prov}, Modell={model}")
         try:
-            res = summarize(cfg, {"source": "Test", "title": "Halloween event returns to New Eden",
-                                  "summary": "Spooky combat sites and new SKINs are available until early November."})
-            print(json.dumps(res, ensure_ascii=False, indent=2))
+            res = summarize_batch(cfg, [{"url": "test", "source": "Test", "title": "Halloween event returns to New Eden",
+                                         "summary": "Spooky combat sites and new SKINs are available until early November."}])
+            print(json.dumps(res["test"], ensure_ascii=False, indent=2))
             log("KI-Test OK")
             return 0
         except Exception as ex:
@@ -407,17 +430,15 @@ def main():
             log(f"  [{mark}] {i['date'] and i['date'].date()} {i['source']}: {i['title']}")
         return 0
 
-    done, ai_down = 0, False
-    for it in todo[:max_new]:
-        if ai_down:
-            gen = fallback(it)
-        else:
-            try:
-                gen = summarize(cfg, it)
-                done += 1
-            except Exception as ex:
-                log(f"KI-Fehler bei '{it['title']}': {ex} – nutze Feed-Text, KI für diesen Lauf aus")
-                gen, ai_down = fallback(it), True
+    batch = todo[:max_new]
+    try:
+        gens = summarize_batch(cfg, batch) if batch else {}
+    except Exception as ex:
+        log(f"KI-Fehler: {ex} – nutze Feed-Text, nächster Lauf versucht es erneut")
+        gens = {}
+    done = sum(1 for it in batch if it["url"] in gens)
+    for it in batch:
+        gen = gens.get(it["url"]) or fallback(it)
         prev_img = (state.get(it["url"]) or {}).get("image")
         img = prev_img if prev_img and (Path(cfg["NEWS_IMG_DIR"]) / Path(prev_img).name).exists() else get_image(cfg, it)
         state[it["url"]] = {
