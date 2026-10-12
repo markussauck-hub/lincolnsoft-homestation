@@ -345,6 +345,22 @@
             transform: translateY(-2px);
         }
 
+        /* Freie Plätze: zurückgenommen, nicht klickbar */
+        .tool-card--empty {
+            background: transparent;
+            border: 1px dashed rgba(56, 130, 212, 0.25);
+            box-shadow: none;
+            opacity: 0.38;
+            cursor: default;
+        }
+        .tool-card--empty:hover {
+            background: transparent;
+            border-color: rgba(56, 130, 212, 0.25);
+            box-shadow: none;
+            transform: none;
+        }
+        .tool-card--empty .tool-name { font-weight: 600; color: var(--eve-text-muted); }
+
         .tool-name {
             color: #ffffff;
             font-weight: 700;
@@ -528,22 +544,22 @@
                     <span class="tool-name">EVE Invention Helper</span>
                     <span class="tool-desc">Datacores, Skills &amp; Bauteile für T2-Invention</span>
                 </a>
-                <a href="#" class="tool-card">
-                    <span class="tool-name">Tool 03</span>
-                    <span class="tool-desc">Freier Platzhalter / Link</span>
-                </a>
-                <a href="#" class="tool-card">
-                    <span class="tool-name">Tool 04</span>
-                    <span class="tool-desc">Freier Platzhalter / Link</span>
-                </a>
-                <a href="#" class="tool-card">
-                    <span class="tool-name">Tool 05</span>
-                    <span class="tool-desc">Freier Platzhalter / Link</span>
-                </a>
-                <a href="#" class="tool-card">
-                    <span class="tool-name">Tool 06</span>
-                    <span class="tool-desc">Freier Platzhalter / Link</span>
-                </a>
+                <div class="tool-card tool-card--empty" aria-hidden="true">
+                    <span class="tool-name">Andockplatz 03</span>
+                    <span class="tool-desc">frei – Modul in Planung</span>
+                </div>
+                <div class="tool-card tool-card--empty" aria-hidden="true">
+                    <span class="tool-name">Andockplatz 04</span>
+                    <span class="tool-desc">frei – Modul in Planung</span>
+                </div>
+                <div class="tool-card tool-card--empty" aria-hidden="true">
+                    <span class="tool-name">Andockplatz 05</span>
+                    <span class="tool-desc">frei – Modul in Planung</span>
+                </div>
+                <div class="tool-card tool-card--empty" aria-hidden="true">
+                    <span class="tool-name">Andockplatz 06</span>
+                    <span class="tool-desc">frei – Modul in Planung</span>
+                </div>
             </div>
         </section>
 
