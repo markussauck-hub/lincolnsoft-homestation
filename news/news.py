@@ -35,10 +35,13 @@ DEFAULTS = {
     "NEWS_PROVIDER": "gemini",                       # gemini | claude | none
     "GEMINI_MODEL": "gemini-flash-latest",
     "CLAUDE_MODEL": "claude-haiku-5-5",
+    # Reihenfolge zählt: spezifische Feeds zuerst (bessere Quellen-Bezeichnung), der Sammel-Feed
+    # /rss zuletzt als Auffangnetz – doppelte URLs werden zusammengeführt.
     "NEWS_FEEDS": (
         "EVE News|https://www.eveonline.com/rss/news;"
         "Dev-Blog|https://www.eveonline.com/rss/dev-blogs;"
-        "Patch Notes|https://www.eveonline.com/rss/patch-notes"
+        "Patch Notes|https://www.eveonline.com/rss/patch-notes;"
+        "EVE Online|https://www.eveonline.com/rss"
     ),
     "NEWS_OUT": str(HOME / "server/site/news.json"),
     "NEWS_STATE": str(HOME / "repos/news-state.json"),
@@ -182,7 +185,7 @@ def parse_feed(raw, source):
 
 
 def fetch_feeds(cfg, verbose=False):
-    out = []
+    out, failed = [], []
     for part in cfg["NEWS_FEEDS"].split(";"):
         part = part.strip()
         if not part:
@@ -194,7 +197,9 @@ def fetch_feeds(cfg, verbose=False):
                 log(f"Feed {name.strip()}: {len(items)} Einträge")
             out.extend(items)
         except Exception as ex:                                 # ein kaputter Feed stoppt nicht alles
-            log(f"Feed {name.strip()} FEHLER: {ex}")
+            failed.append(f"{name.strip()} ({ex})")
+    if failed and (verbose or not out):                        # im Normalbetrieb nur loggen, wenn gar nichts kam
+        log("Feed-Fehler: " + "; ".join(failed))
     return out
 
 
