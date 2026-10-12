@@ -39,11 +39,13 @@ DEFAULTS = {
     "CLAUDE_MODEL": "claude-haiku-5-5",
     # Reihenfolge zählt: spezifische Feeds zuerst (bessere Quellen-Bezeichnung), der Sammel-Feed
     # /rss zuletzt als Auffangnetz – doppelte URLs werden zusammengeführt.
+    # Optionaler dritter Teil = Titel-Filter (Regex), z. B. für gemischte Feeds fremder Seiten.
     "NEWS_FEEDS": (
         "EVE News|https://www.eveonline.com/rss/news;"
         "Dev-Blog|https://www.eveonline.com/rss/dev-blogs;"
         "Patch Notes|https://www.eveonline.com/rss/patch-notes;"
-        "EVE Online|https://www.eveonline.com/rss"
+        "EVE Online|https://www.eveonline.com/rss;"
+        r"Massively OP|https://massivelyop.com/tag/eve-online/feed/|\bEVE\b|New Eden|\bCCP\b"
     ),
     "NEWS_OUT": str(HOME / "server/site/news.json"),
     "NEWS_STATE": str(HOME / "repos/news-state.json"),
@@ -194,9 +196,13 @@ def fetch_feeds(cfg, verbose=False):
         part = part.strip()
         if not part:
             continue
-        name, _, url = part.partition("|")
+        name, _, rest = part.partition("|")
+        url, _, flt = rest.partition("|")                      # optional: Name|URL|Titel-Filter (Regex)
         try:
             items = parse_feed(http(url.strip(), timeout=30), name.strip())
+            if flt.strip():
+                rx = re.compile(flt.strip())
+                items = [i for i in items if rx.search(i["title"])]
             if verbose:
                 log(f"Feed {name.strip()}: {len(items)} Einträge")
             out.extend(items)
