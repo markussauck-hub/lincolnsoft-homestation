@@ -11,6 +11,7 @@ schreiben und legt das Ergebnis als news.json in den Webroot.
     python3 news.py --dry-run       # zeigt, was passieren würde, schreibt nichts, ruft keine KI
     python3 news.py --no-ai         # ohne KI: Titel + Feed-Text (englisch) übernehmen
     python3 news.py --rebuild       # alle Einträge neu von der KI schreiben lassen
+    python3 news.py --test-ai       # ein KI-Testaufruf (prüft Key/Modell)
 
 Konfiguration: news.env (siehe news.env.example), Standard-Pfad ~/.config/lincolnsoft/news.env
 Nur Standardbibliothek.
@@ -279,12 +280,15 @@ def summarize(cfg, item):
         try:
             return parse_ai_json(ask(cfg, prompt)) | {"ai": provider}
         except urllib.error.HTTPError as ex:
-            last = f"HTTP {ex.code}: {ex.read()[:300].decode('utf-8', 'replace')}"
-            if ex.code in (400, 401, 403, 404):
-                break                                       # Konfigurationsfehler – nicht weiter versuchen
+            last = f"HTTP {ex.code}: {ex.read()[:400].decode('utf-8', 'replace').strip()}"
+            log(f"  KI-Versuch {attempt + 1}/3 fehlgeschlagen: {last}")
+            if ex.code in (400, 401, 403, 404, 429):
+                break                   # Konfiguration/Key/Modell/Kontingent – Wiederholen bringt nichts
         except Exception as ex:
-            last = str(ex)
-        time.sleep(5 * (attempt + 1))
+            last = f"{type(ex).__name__}: {ex}"
+            log(f"  KI-Versuch {attempt + 1}/3 fehlgeschlagen: {last}")
+        if attempt < 2:
+            time.sleep(3 * (attempt + 1))
     raise RuntimeError(last)
 
 
@@ -301,11 +305,25 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-ai", action="store_true")
     ap.add_argument("--rebuild", action="store_true")
+    ap.add_argument("--test-ai", action="store_true", help="ein einzelner KI-Testaufruf, zeigt Antwort oder Fehler")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
     if args.no_ai:
         cfg["NEWS_PROVIDER"] = "none"
+    if args.test_ai:
+        prov = cfg["NEWS_PROVIDER"].lower()
+        model = cfg["GEMINI_MODEL"] if prov == "gemini" else cfg["CLAUDE_MODEL"]
+        log(f"KI-Test: Anbieter={prov}, Modell={model}")
+        try:
+            res = summarize(cfg, {"source": "Test", "title": "Halloween event returns to New Eden",
+                                  "summary": "Spooky combat sites and new SKINs are available until early November."})
+            print(json.dumps(res, ensure_ascii=False, indent=2))
+            log("KI-Test OK")
+            return 0
+        except Exception as ex:
+            log(f"KI-Test FEHLGESCHLAGEN: {ex}")
+            return 1
     state_path, out_path = Path(cfg["NEWS_STATE"]), Path(cfg["NEWS_OUT"])
     max_items, max_new = int(cfg["NEWS_MAX_ITEMS"]), int(cfg["NEWS_MAX_NEW_PER_RUN"])
     cutoff = time.time() - int(cfg["NEWS_MAX_AGE_DAYS"]) * 86400
@@ -333,14 +351,17 @@ def main():
             log(f"  [{mark}] {i['date'] and i['date'].date()} {i['source']}: {i['title']}")
         return 0
 
-    done = 0
+    done, ai_down = 0, False
     for it in todo[:max_new]:
-        try:
-            gen = summarize(cfg, it)
-            done += 1
-        except Exception as ex:
-            log(f"KI-Fehler bei '{it['title']}': {ex} – nutze Feed-Text")
+        if ai_down:
             gen = fallback(it)
+        else:
+            try:
+                gen = summarize(cfg, it)
+                done += 1
+            except Exception as ex:
+                log(f"KI-Fehler bei '{it['title']}': {ex} – nutze Feed-Text, KI für diesen Lauf aus")
+                gen, ai_down = fallback(it), True
         state[it["url"]] = {
             **gen,
             "url": it["url"], "source": it["source"], "image": it["image"],
