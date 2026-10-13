@@ -568,13 +568,60 @@
                 radial-gradient(ellipse at 20% 80%, hsla(calc(var(--hue, 200) + 40), 80%, 45%, .3), transparent 55%),
                 linear-gradient(135deg, #07142a, #0b1f3d);
         }
+        .news-img--none { overflow: hidden; }
         .news-img--none::after {
             content: attr(data-label);
-            position: absolute;
+            position: absolute; z-index: 3;
             left: 1.25rem; bottom: 1.9rem;
             font: 700 0.65rem/1 var(--font-mono);
             letter-spacing: 3px;
-            color: hsla(var(--hue, 200), 100%, 82%, .75);
+            color: hsla(var(--hue, 200), 100%, 82%, .85);
+            text-shadow: 0 0 10px hsla(var(--hue, 200), 100%, 60%, .6);
+        }
+        .col-lead .news-img--none::after { left: 1.75rem; bottom: 2.6rem; font-size: .75rem; }
+        /* Motiv im Platzhalter – Größe/Lage je Artikel leicht verschieden (--s, --x, --y aus der URL) */
+        .ph { position: absolute; pointer-events: none; }
+        .ph-scan {
+            inset: 0; z-index: 2; opacity: .35;
+            background: repeating-linear-gradient(180deg, transparent 0 3px, rgba(0, 0, 0, .25) 3px 4px);
+        }
+        /* EVE: Planet mit Ring und Lichtkante */
+        .ph-planet {
+            width: var(--s); aspect-ratio: 1; right: var(--x); top: var(--y); border-radius: 50%;
+            background: radial-gradient(circle at 32% 30%,
+                hsla(var(--hue), 85%, 78%, .95) 0%, hsla(var(--hue), 70%, 48%, .9) 28%,
+                hsla(var(--hue), 75%, 20%, .95) 58%, #030712 80%);
+            box-shadow: 0 0 40px hsla(var(--hue), 95%, 60%, .35), -6px -4px 18px hsla(var(--hue), 100%, 75%, .25) inset;
+        }
+        .ph-ring {
+            width: calc(var(--s) * 1.9); height: calc(var(--s) * .42);
+            right: calc(var(--x) - var(--s) * .45); top: calc(var(--y) + var(--s) * .29);
+            border-radius: 50%; transform: rotate(-16deg);
+            border: 1.5px solid hsla(var(--hue), 100%, 82%, .55);
+            border-top-color: transparent;
+            box-shadow: 0 0 8px hsla(var(--hue), 100%, 70%, .35);
+        }
+        .ph-station {
+            width: 3px; height: 3px; right: calc(var(--x) + var(--s) * 1.15); top: calc(var(--y) + var(--s) * .1);
+            border-radius: 50%; background: #fff; box-shadow: 0 0 6px 2px hsla(var(--hue), 100%, 75%, .8);
+            animation: blink 3s ease-in-out infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+        /* RimWorld: tiefe Sonne über Bergkamm */
+        .ph-sun {
+            width: var(--s); aspect-ratio: 1; right: var(--x); bottom: calc(var(--s) * -.15); border-radius: 50%;
+            background: radial-gradient(circle, #ffe2a8 0%, #ffb35c 35%, rgba(240, 120, 50, .6) 60%, transparent 72%);
+            filter: blur(.5px);
+        }
+        .ph-ridge, .ph-ridge2 { left: 0; right: 0; bottom: 0; }
+        .ph-ridge {
+            height: 55%; background: linear-gradient(180deg, #2a1a12, #120b08);
+            clip-path: polygon(0 70%, 12% 45%, 22% 58%, 35% 30%, 47% 52%, 58% 40%, 70% 62%, 82% 35%, 92% 55%, 100% 42%, 100% 100%, 0 100%);
+            opacity: .85;
+        }
+        .ph-ridge2 {
+            height: 38%; background: #0b0706;
+            clip-path: polygon(0 55%, 15% 72%, 28% 48%, 40% 66%, 55% 50%, 68% 74%, 80% 56%, 100% 68%, 100% 100%, 0 100%);
         }
         .news-card h2 a, .news-card h3 a { color: inherit; text-decoration: none; }
         .news-card h2 a:hover, .news-card h3 a:hover { color: var(--eve-cyan); }
@@ -893,8 +940,21 @@
             return t.ago(n, (n === 1 ? t.unit1 : t.units)[i]);
         }
 
-        // Bilder legt der News-Bot unter news-img/ ab (nur dieser relative Pfad ist erlaubt)
-        const localImg = (p) => /^news-img\/[0-9a-f]{16}\.(jpg|png|webp|gif|avif)$/.test(p || "") ? p : null;
+        // Bilder legt der News-Bot unter news-img/ (EVE) bzw. news-img-rim/ (RimWorld) ab – nur diese Pfade sind erlaubt
+        const localImg = (p) => /^news-img(-rim)?\/[0-9a-f]{16}\.(jpg|png|webp|gif|avif)$/.test(p || "") ? p : null;
+
+        // Platzhalter ohne Artikelbild: kleines Motiv (Planet bzw. Sonnenuntergang), je Artikel etwas anders
+        function addMotif(pic, channel, seedText, lead) {
+            let h = 0;
+            for (const c of String(seedText)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+            const r = (n) => ((h = (h * 1103515245 + 12345) >>> 0) % 1000) / 1000 * n;
+            const s = (lead ? 120 : 64) + r(lead ? 70 : 34);
+            pic.style.setProperty("--s", s + "px");
+            pic.style.setProperty("--x", (8 + r(28)) + "%");
+            pic.style.setProperty("--y", (channel === "rimworld" ? 0 : (lead ? 20 : 12) + r(lead ? 50 : 26)) + "px");
+            const parts = channel === "rimworld" ? ["ph-sun", "ph-ridge", "ph-ridge2"] : ["ph-planet", "ph-ring", "ph-station"];
+            pic.append(...parts.map(c => el("span", "ph " + c)), el("span", "ph ph-scan"));
+        }
         const hue = (c) => ({ update: 195, patch: 160, "dev-blog": 265, event: 25, community: 320, esports: 0 })[(c || "").toLowerCase()] ?? 210;
 
         const layout = (i) => i === 0 ? "col-lead" : i === 1 ? "col-side" : "col-4";
@@ -914,7 +974,11 @@
                 const img = localImg(it.image) || safeUrl(it.image);
                 const pic = el("div", "news-img" + (img ? "" : " news-img--none"));
                 if (img) pic.style.backgroundImage = `url("${img}")`;
-                else { pic.style.setProperty("--hue", sec.channel === "rimworld" ? 32 : hue(it.category)); pic.dataset.label = (it.category || it.source || fallback).toUpperCase(); }
+                else {
+                    pic.style.setProperty("--hue", sec.channel === "rimworld" ? 32 : hue(it.category));
+                    pic.dataset.label = (it.category || it.source || fallback).toUpperCase();
+                    addMotif(pic, sec.channel, it.url || txt.title, i === 0);
+                }
                 body.append(pic);
                 const meta = el("div", "news-meta");
                 const src = (it.source || fallback).toUpperCase(), cat = (it.category || "").toUpperCase();
