@@ -463,6 +463,11 @@
         }
         .tool-card--game { border-color: rgba(255, 176, 32, 0.35); }
         .tool-card--game:hover { border-color: #ffb020; box-shadow: 0 0 12px rgba(255, 176, 32, 0.35); }
+        /* Free-Games-Kachel: grün, Badge zeigt die Anzahl aus free-games.json */
+        .tool-card--free { border-color: rgba(61, 255, 154, 0.3); }
+        .tool-card--free:hover { border-color: #3dff9a; box-shadow: 0 0 12px rgba(61, 255, 154, 0.3); }
+        .tool-card--free .tool-badge { color: #3dff9a; border-color: rgba(61, 255, 154, 0.5); }
+        .tool-card--free .tool-badge:empty { display: none; }
 
         .tool-name {
             color: #ffffff;
@@ -782,6 +787,11 @@
                     <span class="tool-badge">ALPHA · SPIEL</span>
                     <span class="tool-name">GTA VII Entwickler zittern vor diesem neuen Spiel!</span>
                     <span class="tool-desc">Klassikerneuinterpretation – direkt im Browser spielen</span>
+                </a>
+                <a href="/free-games/" class="tool-card tool-card--free">
+                    <span class="tool-badge" id="free-count"></span>
+                    <span class="tool-name">Free Games</span>
+                    <span class="tool-desc">Gerade gratis bei Epic, GOG, Steam &amp; itch.io – stündlich aktualisiert</span>
                 </a>
                 <div class="tool-card tool-card--empty" aria-hidden="true">
                     <span class="tool-name">Andockplätze 04+</span>
@@ -1286,6 +1296,22 @@
         tick(); load();
         setInterval(tick, 15000);
         setInterval(() => { if (!document.hidden) load(); }, 60000);
+    })();
+    </script>
+
+    <script>
+    /* Free-Games-Kachel: Anzahl der aktuell gratis erhältlichen Spiele */
+    (() => {
+        const badge = document.getElementById("free-count");
+        if (!badge) return;
+        fetch("free-games.json", { cache: "no-cache" })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(d => {
+                const now = Date.now();
+                const n = (d.current || []).filter(g => !g.end || new Date(g.end) > now).length;
+                if (n) badge.textContent = n === 1 ? "1 SPIEL GRATIS" : `${n} SPIELE GRATIS`;
+            })
+            .catch(() => {});
     })();
     </script>
 

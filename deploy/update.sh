@@ -5,6 +5,7 @@
 #   2. deploy/server/Caddyfile bzw. docker-compose.yml geändert -> prüfen, sichern, übernehmen
 #   3. Kontakt-Dienst (deploy/kontakt) geändert -> Container "api" neu starten
 #   4. alle 30 Min. das Stationslogbuch (changelog.json) aktualisieren
+#   4b. stündlich die Gratis-Spiele (free-games.json) aktualisieren
 #   5. RimWorld-News einmalig sofort holen, solange es news-rimworld.json noch nicht gibt
 #
 #   update.sh           normaler Lauf
@@ -86,6 +87,15 @@ changelog() {
     fi
 }
 
+# stündlich, im Hintergrund
+freegames() {
+    [ -x "$REPO/deploy/freegames.py" ] || return 0
+    if [ -z "$(find "$STATE/freegames.stamp" -mmin -60 2>/dev/null)" ]; then
+        touch "$STATE/freegames.stamp"
+        nohup "$REPO/deploy/freegames.py" >> "$HOME/repos/freegames.log" 2>&1 &
+    fi
+}
+
 # RimWorld-Kanal: beim ersten Mal nicht bis zum nächsten 3-Stunden-Lauf warten (genau ein Versuch)
 rimworld_first_run() {
     [ -f "$TARGET/news-rimworld.json" ] && return 0
@@ -120,6 +130,7 @@ main() {
     sync_caddy
     restart_api_if_changed
     changelog
+    freegames
     rimworld_first_run
 }
 

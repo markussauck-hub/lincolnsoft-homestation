@@ -30,6 +30,14 @@ Auf dem Server:
 
 Hinweis: Dateien, die aus `site/` gelöscht werden, bleiben in `~/server/site` liegen und müssen dort von Hand entfernt werden.
 
+## Free Games
+
+`deploy/freegames.py` (stündlich über `update.sh`) sammelt Spiele, die man dauerhaft geschenkt bekommt:
+Epic Games Store direkt (inkl. „demnächst gratis“) und die GamerPower-API für GOG, Steam und itch.io.
+Ergebnis: `~/server/site/free-games.json` + Cover in `free-img/`, angezeigt auf `/free-games/` und als Anzahl
+auf der Kachel. GamerPower verlangt einen sichtbaren Quellenlink (steht auf der Seite). Log: `~/repos/freegames.log`,
+Test: `deploy/freegames.py --dry-run`.
+
 ## Kontaktformular und Aufrufzähler
 
 Container `api` (`deploy/kontakt/kontakt.py`, Python-Standardbibliothek), Caddy leitet `/api/*` dorthin.
