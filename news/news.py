@@ -471,11 +471,15 @@ def run_channel(cfg, name, args):
     if state_path.exists() and not args.rebuild:
         state = json.loads(state_path.read_text(encoding="utf-8"))
 
-    feed = {}
+    feed, titles = {}, set()
     for it in fetch_feeds(cfg, verbose=args.dry_run, key=ch["feeds"]):
         if it["date"] and it["date"].timestamp() < cutoff:
             continue
-        feed.setdefault(it["url"], it)                          # gleiche URL in zwei Feeds -> einmal
+        key = re.sub(r"\W+", " ", it["title"]).strip().lower()
+        if it["url"] in feed or key in titles:                  # gleiche Meldung in zwei Feeds (z. B. Blog + Steam) -> einmal
+            continue
+        titles.add(key)
+        feed[it["url"]] = it
     if not feed:
         log(f"[{name}] Keine Feed-Einträge – {out_path.name} bleibt unverändert.")
         return 0
