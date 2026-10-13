@@ -40,8 +40,9 @@ HOME = Path.home()
 DEFAULTS = {
     "NEWS_PROVIDER": "gemini",                       # gemini | claude | none
     "GEMINI_MODEL": "gemini-flash-latest",
-    # Ausweichmodelle, wenn das Hauptmodell überlastet ist (HTTP 503) – mit ";" getrennt, leer = keins
-    "GEMINI_FALLBACK_MODELS": "gemini-flash-lite-latest",
+    # Ausweichmodelle, wenn das Hauptmodell überlastet ist oder sein Kontingent leer (503/429/404) – mit ";" getrennt.
+    # Bewusst aus verschiedenen Generationen: die haben getrennte Kapazitäten und Kontingente.
+    "GEMINI_FALLBACK_MODELS": "gemini-flash-lite-latest;gemini-3.5-flash;gemini-3.1-flash-lite;gemini-2.5-flash",
     "CLAUDE_MODEL": "claude-haiku-5-5",
     # Reihenfolge zählt: spezifische Feeds zuerst (bessere Quellen-Bezeichnung), der Sammel-Feed
     # /rss zuletzt als Auffangnetz – doppelte URLs werden zusammengeführt.
@@ -336,15 +337,15 @@ def build_prompt(items, channel="eve"):
 
 
 def ask_gemini(cfg, prompt):
-    """Hauptmodell; ist es überlastet (503), der Reihe nach die Ausweichmodelle."""
+    """Hauptmodell; ist es überlastet/ausgeschöpft/unbekannt (503/429/404), der Reihe nach die Ausweichmodelle."""
     models = [cfg["GEMINI_MODEL"]] + [m.strip() for m in cfg.get("GEMINI_FALLBACK_MODELS", "").split(";") if m.strip()]
     for n, model in enumerate(models):
         try:
             return ask_gemini_model(cfg, prompt, model)
         except urllib.error.HTTPError as ex:
-            if ex.code != 503 or n == len(models) - 1:
+            if ex.code not in (503, 429, 404) or n == len(models) - 1:
                 raise
-            log(f"  {model} überlastet (503) – weiche aus auf {models[n + 1]}")
+            log(f"  {model}: HTTP {ex.code} – weiche aus auf {models[n + 1]}")
 
 
 def ask_gemini_model(cfg, prompt, model):
