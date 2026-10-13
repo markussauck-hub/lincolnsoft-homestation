@@ -346,6 +346,10 @@ def ask_gemini(cfg, prompt):
             if ex.code not in (503, 429, 404) or n == len(models) - 1:
                 raise
             log(f"  {model}: HTTP {ex.code} – weiche aus auf {models[n + 1]}")
+        except (TimeoutError, urllib.error.URLError) as ex:     # hängt das Modell, nicht warten, sondern weiter
+            if n == len(models) - 1:
+                raise
+            log(f"  {model}: {type(ex).__name__} – weiche aus auf {models[n + 1]}")
 
 
 def ask_gemini_model(cfg, prompt, model):
