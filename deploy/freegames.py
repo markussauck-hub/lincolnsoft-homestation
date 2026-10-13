@@ -119,6 +119,13 @@ def fetch_epic(now):
 
 
 # --------------------------------------------------------------------------- GamerPower
+def clean_title(t):
+    """'Dual Chroma (itch.io) Giveaway' -> 'Dual Chroma', 'Dwarven Realms Key' -> 'Dwarven Realms'."""
+    t = re.sub(r"\s+(Giveaway|Key|Steam Key|Game Key)$", "", t.strip(), flags=re.I)
+    t = re.sub(r"\s*\((Steam|GOG|Epic Games|Epic Games Store|itch\.io|IndieGala|DRM-Free)\)", "", t, flags=re.I)
+    return re.sub(r"\s+(Giveaway|Key)$", "", t.strip(), flags=re.I).strip()
+
+
 def fetch_gamerpower(now):
     raw, _ = get(GP_URL)
     out = []
@@ -137,8 +144,7 @@ def fetch_gamerpower(now):
         if not url or not url.startswith("https://"):
             continue
         out.append({
-            "title": (g.get("title") or "").replace(" Giveaway", "").replace(" (Steam)", "").replace(" (GOG)", "")
-                     .replace(" (Epic Games)", "").replace(" (IndieGala)", "").strip(),
+            "title": clean_title(g.get("title") or ""),
             "shop": shop, "url": url, "img_src": g.get("image") or g.get("thumbnail"),
             "worth": worth, "start": None, "end": iso(end), "via": "gamerpower",
         })
