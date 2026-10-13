@@ -33,6 +33,7 @@ DEFAULTS = {
         "markussauck-hub/lincolnsoft-homestation|HOMESTATION",
         "markussauck-hub/eve-price-checker|PRICE CHECKER",
         "markussauck-hub/eve-invention-helper|INVENTION HELPER",
+        "markussauck-hub/eve-pi-planner|PI PLANNER",
         "markussauck-hub/Snake-3|SPIEL|game",
     ]),
     "LOG_OUT": str(HOME / "server/site/changelog.json"),
