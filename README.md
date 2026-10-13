@@ -44,3 +44,18 @@ von einer KI (Gemini oder Claude, eigener API-Key) kurze Teaser auf Deutsch und 
 - Test: `python3 news/news.py --dry-run`
 - Ohne KI: `python3 news/news.py --no-ai`
 - Log: `~/repos/news.log`
+
+## Stationslogbuch
+
+`deploy/changelog.py` sammelt aus den Tool-Repos alle Commits, deren Nachricht mit **`[log]`** beginnt, und schreibt
+die neuesten nach `~/server/site/changelog.json`. Die Startseite zeigt die letzten 3 (feste Einträge im HTML dienen als Fallback).
+
+```
+[log] Baumaterialien mit Ø-Kosten je Handelshub   -> erscheint im Logbuch
+Fix: Tippfehler im Tooltip                         -> erscheint nicht
+```
+
+- Cron: `*/30 * * * * ~/repos/lincolnsoft-homestation/deploy/changelog.py >> ~/repos/changelog.log 2>&1`
+- Private Repos (Snake-3) brauchen `GITHUB_TOKEN` in `~/.config/lincolnsoft/changelog.env`
+  (fine-grained Token, nur Repo Snake-3, Berechtigung „Contents: Read-only“), `chmod 600`
+- Test: `deploy/changelog.py --dry-run`
