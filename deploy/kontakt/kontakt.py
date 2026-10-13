@@ -7,13 +7,16 @@ für die Sperre gegen Massen-Anfragen.
 
     GET  /api/kontakt/token   -> {"t": "..."}   signierter Zeitstempel (Formular holt ihn beim Laden)
     POST /api/kontakt         -> {"ok": true} oder {"ok": false, "error": "..."}
+    POST /api/zaehler/<name>  -> zählt einen Aufruf (z. B. snake-3); nur Tageszahl, keine IP, kein Cookie
+    GET  /api/zaehler         -> {"snake-3": {"2026-10-13": 12, ...}}
 
 Spam-Schutz ohne Captcha: verstecktes Feld (Honeypot), Mindestzeit zwischen Laden und Absenden,
 Sperre pro IP (3 Nachrichten / 10 Min.), Tageslimit gesamt.
 
 Konfiguration per Umgebung (docker compose env_file):
     SMTP_USER   Gmail-Adresse, über die gesendet wird
-    SMTP_PASS   Google-App-Passwort (leer = Testmodus: Mail wird nur ins Log geschrieben)
+    SMTP_PASS   Google-App-Passwort (leer = Formular meldet "noch nicht aktiv")
+    DRY_RUN     1 = Testmodus: Mail wird nur ins Log geschrieben, nicht gesendet
     MAIL_TO     Empfänger (Standard: SMTP_USER)
     SECRET      zufälliger Schlüssel für die Zeitstempel (z. B. `openssl rand -hex 32`)
     DAILY_MAX   Nachrichten pro Tag gesamt (Standard 30)
@@ -37,6 +40,10 @@ MAIL_TO = os.environ.get("MAIL_TO") or SMTP_USER
 SECRET = (os.environ.get("SECRET") or os.urandom(32).hex()).encode()
 DAILY_MAX = int(os.environ.get("DAILY_MAX", "30"))
 PORT = int(os.environ.get("PORT", "8080"))
+DRY_RUN = os.environ.get("DRY_RUN") == "1"
+DATA_DIR = os.environ.get("DATA_DIR", "/data")
+COUNTERS = {"snake-3"}                            # erlaubte Zähler
+KEEP_DAYS = 400
 
 MIN_SECONDS, MAX_SECONDS = 4, 2 * 3600          # Formular frühestens nach 4 s, spätestens nach 2 h absenden
 PER_IP, PER_IP_WINDOW = 3, 600
@@ -89,6 +96,37 @@ def allow(ip):
         return True
 
 
+def count(name):
+    """Tageszähler in DATA_DIR/zaehler.json (Schreiben atomar, alte Tage werden verworfen)."""
+    import datetime
+    path = os.path.join(DATA_DIR, "zaehler.json")
+    with lock:
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            data = {}
+        today = time.strftime("%Y-%m-%d")
+        days = data.setdefault(name, {})
+        days[today] = days.get(today, 0) + 1
+        oldest = (datetime.date.today() - datetime.timedelta(days=KEEP_DAYS)).isoformat()
+        for d in [d for d in days if d < oldest]:
+            del days[d]
+        os.makedirs(DATA_DIR, exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        os.replace(tmp, path)
+
+
+def read_counts():
+    try:
+        with open(os.path.join(DATA_DIR, "zaehler.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
 def send(name, email, message):
     msg = EmailMessage()
     msg["Subject"] = f"[lincolnsoft.de] Kontakt von {name}"
@@ -96,8 +134,8 @@ def send(name, email, message):
     msg["To"] = MAIL_TO or "kontakt@lincolnsoft.de"
     msg["Reply-To"] = email
     msg.set_content(f"Name:   {name}\nE-Mail: {email}\n\n{message}\n\n-- \nGesendet über das Kontaktformular auf lincolnsoft.de\n")
-    if not SMTP_PASS:
-        log("TESTMODUS (kein SMTP_PASS) – diese Mail würde gesendet:\n" + msg.as_string())
+    if DRY_RUN:
+        log("TESTMODUS – diese Mail würde gesendet:\n" + msg.as_string())
         return
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context(), timeout=20) as s:
         s.login(SMTP_USER, SMTP_PASS)
@@ -121,12 +159,25 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
-        if self.path.split("?")[0] == "/api/kontakt/token":
-            return self.reply(200, {"t": make_token()})
+        path = self.path.split("?")[0]
+        if path == "/api/kontakt/token":
+            return self.reply(200, {"t": make_token(), "active": bool(SMTP_PASS) or DRY_RUN})
+        if path == "/api/zaehler":
+            return self.reply(200, read_counts())
         self.reply(404, {"ok": False})
 
     def do_POST(self):
-        if self.path.split("?")[0] != "/api/kontakt":
+        path = self.path.split("?")[0]
+        if path.startswith("/api/zaehler/"):
+            name = path.rsplit("/", 1)[1]
+            if name not in COUNTERS:
+                return self.reply(404, {"ok": False})
+            try:
+                count(name)
+            except OSError as e:
+                log(f"Zähler nicht gespeichert: {e}")
+            return self.reply(200, {"ok": True})
+        if path != "/api/kontakt":
             return self.reply(404, {"ok": False})
         try:
             n = int(self.headers.get("Content-Length") or 0)
@@ -136,6 +187,8 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError):
             return self.reply(400, {"ok": False, "error": "Ungültige Anfrage."})
 
+        if not SMTP_PASS and not DRY_RUN:
+            return self.reply(503, {"ok": False, "error": "Das Formular ist noch nicht aktiv – bitte schreib an kontakt@lincolnsoft.de."})
         if clean(data.get("website"), 200):        # Honeypot ausgefüllt -> Bot; so tun, als hätte es geklappt
             log("verworfen: Honeypot")
             return self.reply(200, {"ok": True})
@@ -167,5 +220,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     if not os.environ.get("SECRET"):
         log("Hinweis: SECRET nicht gesetzt – zufälliger Schlüssel, offene Formulare werden beim Neustart ungültig")
-    log(f"Kontakt-Dienst auf Port {PORT}" + ("" if SMTP_PASS else " (TESTMODUS ohne SMTP_PASS)"))
+    mode = " (TESTMODUS)" if DRY_RUN else ("" if SMTP_PASS else " (ohne SMTP_PASS: Formular meldet 'noch nicht aktiv')")
+    log(f"Kontakt-Dienst auf Port {PORT}{mode}")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

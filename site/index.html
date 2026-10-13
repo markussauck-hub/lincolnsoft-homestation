@@ -38,16 +38,8 @@
             background-color: var(--eve-dark-bg);
             background-image:
                 radial-gradient(circle at 50% 20%, rgba(13, 35, 71, 0.6) 0%, rgba(3, 7, 18, 0.95) 70%),
-                radial-gradient(circle at 80% 80%, rgba(0, 80, 160, 0.25) 0%, transparent 50%),
-                radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 150px 180px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 90px 290px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 400px 70px, rgba(255,255,255,0.9), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 620px 210px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 800px 100px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 1000px 350px, #ffffff, rgba(0,0,0,0));
-            background-repeat: repeat;
-            background-size: cover, cover, 1200px 600px, 1200px 600px, 1200px 600px, 1200px 600px, 1200px 600px, 1200px 600px, 1200px 600px;
+                radial-gradient(circle at 80% 80%, rgba(0, 80, 160, 0.25) 0%, transparent 50%);
+            background-attachment: fixed;
             color: var(--eve-text-bright);
             font-family: var(--font-primary);
             line-height: 1.5;
@@ -284,6 +276,73 @@
             .construction-icon { width: 72px; height: 72px; }
         }
 
+        /* ===== Punkt 10: Sternenfeld mit Parallaxe + animierter Header ===== */
+        #sky { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+        .container { position: relative; z-index: 0; }
+
+        /* Chrom-Glanz, der alle paar Sekunden über den Schriftzug läuft */
+        .brand { position: relative; }
+        .brand::after {
+            content: attr(data-text);
+            position: absolute; inset: 0;
+            background: linear-gradient(105deg, transparent 0%, transparent 42%, rgba(255,255,255,.95) 50%, rgba(160,250,255,.6) 54%, transparent 62%, transparent 100%);
+            background-size: 260% 100%;
+            background-position: 160% 0;
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: chrome-sweep 7s ease-in-out 1.2s infinite;
+            pointer-events: none;
+        }
+        @keyframes chrome-sweep {
+            0%   { background-position: 160% 0; }
+            22%  { background-position: -60% 0; }
+            100% { background-position: -60% 0; }
+        }
+        /* Untertitel: sanftes Leuchten */
+        .brand-sub { animation: sub-glow 4.5s ease-in-out infinite; }
+        @keyframes sub-glow {
+            0%, 100% { text-shadow: 0 0 10px rgba(0,240,255,.55); }
+            50%      { text-shadow: 0 0 18px rgba(0,240,255,.95), 0 0 34px rgba(0,240,255,.35); }
+        }
+        /* Scan-Linie über die Lichtkante oben am Header */
+        header::after {
+            content: ''; position: absolute; top: 0; left: -30%; width: 30%; height: 2px;
+            background: linear-gradient(90deg, transparent, #fff, var(--eve-cyan), transparent);
+            filter: blur(.5px); opacity: .9;
+            animation: scan 6s linear infinite;
+        }
+        @keyframes scan { 0% { left: -30%; } 60%, 100% { left: 100%; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            .brand::after, .brand-sub, header::after { animation: none; }
+            header::after { display: none; }
+        }
+
+        /* ===== Musik / Sounds wie im Price Checker ===== */
+        .header-actions { align-items: center; }
+        .snd-btn { font-family: inherit; }
+        .snd-btn .ico { display: inline-block; width: 12px; text-align: center; }
+        .snd-btn.on {
+            background: linear-gradient(180deg, #00b8d9 0%, #006b80 100%);
+            border-color: var(--eve-cyan);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -2px 6px rgba(0, 0, 0, 0.35);
+        }
+        .snd-btn .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 10px; }
+        .snd-btn .eq i { width: 2px; height: 3px; background: currentColor; }
+        .snd-btn.on .eq i { animation: eq 1.2s ease-in-out infinite; }
+        .snd-btn.on .eq i:nth-child(2) { animation-delay: -.4s; } .snd-btn.on .eq i:nth-child(3) { animation-delay: -.8s; }
+        @keyframes eq { 0%, 100% { height: 3px; } 50% { height: 10px; } }
+        .vol { display: inline-flex; align-items: center; gap: 6px; color: var(--eve-cyan); cursor: pointer; margin-left: 4px; }
+        .vol svg { width: 20px; height: 20px; filter: drop-shadow(0 0 4px rgba(0, 240, 255, .45)); }
+        .vol input[type=range] { -webkit-appearance: none; appearance: none; width: 120px; height: 22px; background: transparent; cursor: pointer; margin: 0; }
+        .vol input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, #0c2b52, var(--eve-cyan)); box-shadow: inset 0 1px 2px rgba(0,0,0,.5), 0 0 8px rgba(0,240,255,.3); }
+        .vol input[type=range]::-moz-range-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, #0c2b52, var(--eve-cyan)); }
+        .vol input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #fff, #a6f4ff 45%, #0090b0); border: 1px solid #0c2b52; box-shadow: 0 0 10px rgba(0,240,255,.7); }
+        .vol input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #a6f4ff 45%, #0090b0); border: 1px solid #0c2b52; }
+        @media (prefers-reduced-motion: reduce) { .snd-btn.on .eq i { animation: none; height: 7px; } }
+        @media (max-width: 520px) { .vol { display: none; } }
+
         /* ===== Panels ===== */
         .eve-panel {
             background: var(--eve-panel-bg);
@@ -380,7 +439,11 @@
         .tool-badge {
             align-self: flex-start;
             font: 700 0.6rem/1 var(--font-mono);
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
             color: #ffb020;
             border: 1px solid rgba(255, 176, 32, 0.5);
             border-radius: 9999px;
@@ -457,6 +520,19 @@
 
         /* ===== News: Sprache, Bild, Fußzeile ===== */
         .news-tools { display: flex; align-items: center; gap: 0.9rem; }
+        .news-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem 1.1rem; }
+        .eve-live {
+            display: inline-flex; align-items: center; gap: .4rem;
+            padding: .28rem .7rem; border-radius: 9999px;
+            font: 500 .7rem/1 var(--font-mono); letter-spacing: .5px; color: #dbe7f5; white-space: nowrap;
+            background: rgba(3, 10, 24, .6); border: 1px solid rgba(56, 130, 212, .35);
+        }
+        .eve-live .tq-label { color: var(--eve-text-muted); font-size: .62rem; letter-spacing: 1.5px; }
+        .eve-live .tq-sep { color: var(--eve-text-muted); }
+        .eve-live .tq-dot { width: 7px; height: 7px; border-radius: 50%; background: #8ab4f8; }
+        .eve-live.up .tq-dot { background: #3dff9a; box-shadow: 0 0 8px #3dff9a; animation: pulse 2.4s ease-in-out infinite; }
+        .eve-live.down .tq-dot { background: #ff4d5e; box-shadow: 0 0 8px #ff4d5e; }
+        .eve-live.down .tq-players { color: #ff8a95; }
         .lang-switch { display: inline-flex; border: 1px solid var(--eve-btn-border); border-radius: 9999px; overflow: hidden; }
         .lang-switch button {
             font: 700 0.7rem/1 var(--font-mono);
@@ -511,6 +587,14 @@
             margin-top: 1rem;
         }
 
+        /* RimWorld-Sektion: warmer Akzent statt Cyan */
+        .news--rim { --eve-cyan: #f0a640; --eve-panel-border: rgba(240, 166, 64, 0.32); }
+        .news--rim .eve-panel-title { color: #f0a640; }
+        .news--rim .eve-panel-title::before { background: #f0a640; box-shadow: 0 0 8px #f0a640; }
+        .news--rim .col-lead { border-left-color: #f0a640; background: linear-gradient(135deg, rgba(60, 40, 18, 0.55) 0%, rgba(8, 18, 36, 0.9) 100%); }
+        .news--rim .news-card:hover { border-color: rgba(240, 166, 64, 0.55); }
+        .news--rim .news-card h2 a:hover, .news--rim .news-card h3 a:hover { color: #f0a640; }
+
         .col-lead {
             grid-column: span 8;
             background: linear-gradient(135deg, rgba(16, 38, 70, 0.85) 0%, rgba(8, 18, 36, 0.9) 100%);
@@ -523,6 +607,36 @@
         .col-4 { grid-column: span 4; }
         .col-5 { grid-column: span 5; }
         .col-3 { grid-column: span 3; }
+
+        /* ===== Stationslogbuch ===== */
+        .log { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
+        .log li {
+            display: grid;
+            grid-template-columns: 6.5rem 8.5rem 1fr;
+            align-items: baseline;
+            gap: .75rem;
+            padding: .55rem .25rem;
+            border-bottom: 1px dashed rgba(56, 130, 212, 0.18);
+            font-size: .9rem;
+        }
+        .log li:last-child { border-bottom: 0; }
+        .log time { font: .75rem var(--font-mono); color: var(--eve-text-muted); }
+        .log-tag {
+            justify-self: start;
+            font: 700 .6rem/1 var(--font-mono);
+            letter-spacing: 1px;
+            white-space: nowrap;
+            color: var(--eve-cyan);
+            border: 1px solid rgba(0, 240, 255, .4);
+            border-radius: 9999px;
+            padding: .25rem .5rem;
+        }
+        .log-tag--game { color: #ffb020; border-color: rgba(255, 176, 32, .5); }
+        .log-text { color: #dbe7f5; }
+        @media (max-width: 520px) {
+            .log li { grid-template-columns: auto 1fr; row-gap: .35rem; }
+            .log-text { grid-column: 1 / -1; }
+        }
 
         /* ===== Footer ===== */
         footer {
@@ -553,6 +667,7 @@
 
         @media (max-width: 520px) {
             body { padding: 1rem; }
+            .tool-badge { letter-spacing: .3px; padding: .22rem .45rem; font-size: .55rem; }
             header { padding: 1.4rem 1rem 1.2rem; }
             .col-lead { padding: 1.25rem; }
             footer a { margin-left: 0; margin-right: 1rem; }
@@ -564,16 +679,21 @@
     </style>
 </head>
 <body>
+    <canvas id="sky" aria-hidden="true"></canvas>
 
     <div class="container">
         <!-- Header -->
         <header>
             <div class="brand-kicker"><span class="status-dot"></span>STATION SERVICES ONLINE</div>
-            <h1 class="brand">LINCOLNSOFT</h1>
+            <h1 class="brand" data-text="LINCOLNSOFT">LINCOLNSOFT</h1>
             <div class="brand-sub">HOMESTATION</div>
             <nav class="header-actions">
-                <span class="eve-btn eve-btn--soon" aria-disabled="true" title="Kommt bald">MUSIC</span>
-                <span class="eve-btn eve-btn--soon" aria-disabled="true" title="Kommt bald">SOUNDS</span>
+                <button class="eve-btn snd-btn" id="snd-music" type="button" aria-pressed="false" title="Leise Weltraum-Ambient-Musik"><span class="eq"><i></i><i></i><i></i></span>MUSIK</button>
+                <button class="eve-btn snd-btn" id="snd-fx" type="button" aria-pressed="false" title="Computer-Soundeffekte"><span class="ico">◈</span>SOUNDS</button>
+                <label class="vol" title="Lautstärke">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    <input id="snd-vol" type="range" min="0" max="100" step="1" aria-label="Lautstärke">
+                </label>
             </nav>
         </header>
 
@@ -635,26 +755,27 @@
                     <span class="tool-desc">Klassikerneuinterpretation – direkt im Browser spielen</span>
                 </a>
                 <div class="tool-card tool-card--empty" aria-hidden="true">
-                    <span class="tool-name">Andockplatz 04</span>
-                    <span class="tool-desc">frei – Modul in Planung</span>
-                </div>
-                <div class="tool-card tool-card--empty" aria-hidden="true">
-                    <span class="tool-name">Andockplatz 05</span>
-                    <span class="tool-desc">frei – Modul in Planung</span>
-                </div>
-                <div class="tool-card tool-card--empty" aria-hidden="true">
-                    <span class="tool-name">Andockplatz 06</span>
-                    <span class="tool-desc">frei – Modul in Planung</span>
+                    <span class="tool-name">Andockplätze 04+</span>
+                    <span class="tool-desc">frei – weitere Module in Planung</span>
                 </div>
             </div>
         </section>
 
         <!-- News Dispatch (Zeitungsraster) – Inhalte kommen aus news.json (News-Bot auf dem Server) -->
-        <section class="eve-panel" id="news">
+        <section class="eve-panel news-section" id="news" data-channel="eve" data-src="news.json" data-max="8">
             <div class="eve-panel-header">
-                <div class="eve-panel-title">EVE ONLINE NEWS</div>
+                <div class="news-title-row">
+                    <div class="eve-panel-title">EVE ONLINE NEWS</div>
+                    <!-- EVE live: Spieler online (ESI /status) + EVE-Zeit (UTC) -->
+                    <div class="eve-live" id="eve-live" title="Tranquility – Live-Status von CCP (ESI)">
+                        <span class="tq-dot"></span><span class="tq-label">TQ</span>
+                        <span class="tq-players">–</span>
+                        <span class="tq-sep">·</span>
+                        <span class="tq-time">--:--</span><span class="tq-label">EVE</span>
+                    </div>
+                </div>
                 <div class="news-tools">
-                    <span class="eve-panel-meta" id="news-edition"></span>
+                    <span class="eve-panel-meta news-edition"></span>
                     <div class="lang-switch" role="group" aria-label="Sprache / Language">
                         <button type="button" data-lang="de">DE</button>
                         <button type="button" data-lang="en">EN</button>
@@ -662,7 +783,7 @@
                 </div>
             </div>
 
-            <div class="editorial-grid" id="news-grid">
+            <div class="editorial-grid news-grid">
                 <article class="news-card col-lead">
                     <div>
                         <div class="news-meta"><span>NEWS // STANDBY</span></div>
@@ -671,14 +792,63 @@
                     </div>
                 </article>
             </div>
-            <div class="news-foot" id="news-foot"></div>
+            <div class="news-foot"></div>
+        </section>
+
+        <!-- RimWorld News – eigener Kanal des News-Bots (news-rimworld.json) -->
+        <section class="eve-panel news-section news--rim" id="news-rimworld" data-channel="rimworld" data-src="news-rimworld.json" data-max="5">
+            <div class="eve-panel-header">
+                <div class="eve-panel-title">RIMWORLD NEWS</div>
+                <div class="news-tools">
+                    <span class="eve-panel-meta news-edition"></span>
+                    <div class="lang-switch" role="group" aria-label="Sprache / Language">
+                        <button type="button" data-lang="de">DE</button>
+                        <button type="button" data-lang="en">EN</button>
+                    </div>
+                </div>
+            </div>
+            <div class="editorial-grid news-grid">
+                <article class="news-card col-lead">
+                    <div>
+                        <div class="news-meta"><span>NEWS // STANDBY</span></div>
+                        <h2>Kolonie-Funk wird eingerichtet …</h2>
+                        <p>Sobald der News-Bot die ersten RimWorld-Meldungen empfangen hat, erscheinen sie hier.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="news-foot"></div>
+        </section>
+
+        <!-- Stationslogbuch: changelog.json (deploy/changelog.py sammelt "[log] …"-Commits der Repos); die Einträge hier sind nur Füllmaterial/Fallback -->
+        <section class="eve-panel log-panel" aria-labelledby="log-title">
+            <div class="eve-panel-header">
+                <div class="eve-panel-title" id="log-title">STATIONSLOGBUCH</div>
+                <div class="eve-panel-meta">LETZTE UPDATES</div>
+            </div>
+            <ol class="log">
+                <li>
+                    <time datetime="2026-10-13">13.10.2026</time>
+                    <span class="log-tag">HOMESTATION</span>
+                    <span class="log-text">RimWorld News, EVE-Live-Anzeige, Musik &amp; Sounds, Kontaktformular</span>
+                </li>
+                <li>
+                    <time datetime="2026-10-12">12.10.2026</time>
+                    <span class="log-tag">PRICE CHECKER</span>
+                    <span class="log-text">Baumaterialien mit Ø-Kosten je Handelshub</span>
+                </li>
+                <li>
+                    <time datetime="2026-10-12">12.10.2026</time>
+                    <span class="log-tag log-tag--game">SPIEL</span>
+                    <span class="log-text">Snake 3 Alpha 0.6.2 direkt im Browser spielbar</span>
+                </li>
+            </ol>
         </section>
 
         <footer>
             <span>© 2026 LINCOLNSOFT</span>
             <span>
-                <a href="#">IMPRESSUM</a>
-                <a href="#">DATENSCHUTZ</a>
+                <a href="impressum.html">IMPRESSUM</a>
+                <a href="datenschutz.html">DATENSCHUTZ</a>
             </span>
         </footer>
     </div>
@@ -689,18 +859,20 @@
         const T = {
             de: { more: "WEITERLESEN", top: "TOP-STORY", edition: "AUSGABE", ago: (n, u) => `VOR ${n} ${u}`,
                   units: ["MIN.", "STD.", "TAGEN"], unit1: ["MIN.", "STD.", "TAG"], now: "GERADE EBEN",
-                  foot: (t, ai) => `Kurzfassungen ${ai ? "KI-generiert " : ""}aus den offiziellen EVE-Online-Feeds · Stand ${t} · Originalartikel über „Weiterlesen“`,
+                  foot: (t, ai, b) => `Kurzfassungen ${ai ? "KI-generiert " : ""}aus den offiziellen ${b}-Feeds · Stand ${t} · Originalartikel über „Weiterlesen“`,
                   empty: "Noch keine Meldungen – der News-Bot meldet sich bald." },
             en: { more: "READ MORE", top: "TOP STORY", edition: "EDITION", ago: (n, u) => `${n} ${u} AGO`,
                   units: ["MIN", "HRS", "DAYS"], unit1: ["MIN", "HR", "DAY"], now: "JUST NOW",
-                  foot: (t, ai) => `Summaries ${ai ? "AI-generated " : ""}from the official EVE Online feeds · updated ${t} · full articles via “Read more”`,
+                  foot: (t, ai, b) => `Summaries ${ai ? "AI-generated " : ""}from the official ${b.replace("-", " ")} feeds · updated ${t} · full articles via “Read more”`,
                   empty: "No news yet – the news bot will check in soon." },
         };
-        const grid = document.getElementById("news-grid");
-        const foot = document.getElementById("news-foot");
-        const edition = document.getElementById("news-edition");
+        const BRAND = { eve: "EVE-Online", rimworld: "RimWorld" };
+        const sections = [...document.querySelectorAll(".news-section")].map((s) => ({
+            el: s, channel: s.dataset.channel, src: s.dataset.src, max: Number(s.dataset.max) || 8,
+            grid: s.querySelector(".news-grid"), foot: s.querySelector(".news-foot"), edition: s.querySelector(".news-edition"),
+            data: null,
+        }));
         const buttons = document.querySelectorAll(".lang-switch button");
-        let data = null;
         let lang = "de";
         try { lang = localStorage.getItem("homestation.lang") || (navigator.language || "de").slice(0, 2); } catch { /* egal */ }
         if (!T[lang]) lang = "en";
@@ -712,6 +884,11 @@
             const t = T[lang], s = (Date.now() - new Date(iso)) / 1000;
             if (!iso || isNaN(s)) return "";
             if (s < 120) return t.now;
+            if (s >= 30 * 86400) {                               // ältere Meldungen: Datum statt „vor 195 Tagen“
+                const d = new Date(iso);
+                return lang === "de" ? d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })
+                                     : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).toUpperCase();
+            }
             const [n, i] = s < 3600 ? [Math.floor(s / 60), 0] : s < 86400 ? [Math.floor(s / 3600), 1] : [Math.floor(s / 86400), 2];
             return t.ago(n, (n === 1 ? t.unit1 : t.units)[i]);
         }
@@ -722,15 +899,14 @@
 
         const layout = (i) => i === 0 ? "col-lead" : i === 1 ? "col-side" : "col-4";
 
-        function render() {
-            const t = T[lang];
-            buttons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
-            document.documentElement.lang = lang;
+        function renderSection(sec) {
+            const t = T[lang], data = sec.data;
             if (!data) return;
-            const items = (data.items || []).slice(0, 8);
-            if (!items.length) { grid.replaceChildren(el("p", "news-foot", t.empty)); return; }
+            const items = (data.items || []).slice(0, sec.max);
+            if (!items.length) { sec.grid.replaceChildren(el("p", "news-foot", t.empty)); return; }
+            const fallback = sec.channel === "rimworld" ? "RIMWORLD" : "EVE";
 
-            grid.replaceChildren(...items.map((it, i) => {
+            sec.grid.replaceChildren(...items.map((it, i) => {
                 const txt = it[lang] || it.de || it.en;
                 const url = safeUrl(it.url);
                 const card = el("article", "news-card " + layout(i));
@@ -738,10 +914,10 @@
                 const img = localImg(it.image) || safeUrl(it.image);
                 const pic = el("div", "news-img" + (img ? "" : " news-img--none"));
                 if (img) pic.style.backgroundImage = `url("${img}")`;
-                else { pic.style.setProperty("--hue", hue(it.category)); pic.dataset.label = (it.category || it.source || "EVE").toUpperCase(); }
+                else { pic.style.setProperty("--hue", sec.channel === "rimworld" ? 32 : hue(it.category)); pic.dataset.label = (it.category || it.source || fallback).toUpperCase(); }
                 body.append(pic);
                 const meta = el("div", "news-meta");
-                const src = (it.source || "EVE").toUpperCase(), cat = (it.category || "").toUpperCase();
+                const src = (it.source || fallback).toUpperCase(), cat = (it.category || "").toUpperCase();
                 const tag = i === 0 ? t.top : (cat && !src.includes(cat) && !cat.includes(src) ? cat : "");
                 meta.append(el("span", null, tag ? `${src} // ${tag}` : src),
                             el("span", null, ago(it.date)));
@@ -759,8 +935,14 @@
 
             const gen = new Date(data.generated);
             const loc = lang === "de" ? "de-DE" : "en-GB";
-            edition.textContent = `${t.edition}: ${gen.toLocaleDateString(loc, { month: "long", year: "numeric" }).toUpperCase()}`;
-            foot.textContent = t.foot(gen.toLocaleString(loc, { dateStyle: "short", timeStyle: "short" }), data.provider && data.provider !== "none");
+            sec.edition.textContent = `${t.edition}: ${gen.toLocaleDateString(loc, { month: "long", year: "numeric" }).toUpperCase()}`;
+            sec.foot.textContent = t.foot(gen.toLocaleString(loc, { dateStyle: "short", timeStyle: "short" }), data.provider && data.provider !== "none", BRAND[sec.channel] || "EVE-Online");
+        }
+
+        function render() {
+            buttons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+            document.documentElement.lang = lang;
+            sections.forEach(renderSection);
         }
 
         buttons.forEach(b => b.addEventListener("click", () => {
@@ -770,14 +952,327 @@
         }));
 
         async function load() {
-            try {
-                const r = await fetch("news.json", { cache: "no-cache" });
-                if (r.ok) data = await r.json();
-            } catch { /* news.json fehlt noch – Standby-Karte bleibt */ }
+            await Promise.all(sections.map(async (sec) => {
+                try {
+                    const r = await fetch(sec.src, { cache: "no-cache" });
+                    if (r.ok) sec.data = await r.json();
+                } catch { /* Datei fehlt noch – Standby-Karte bleibt */ }
+            }));
             render();
         }
         load();
         setInterval(load, 15 * 60 * 1000);
+    })();
+    </script>
+    <script>
+    /* Sternenfeld: 3 Ebenen mit Parallaxe (Maus + Scrollen), Funkeln, gelegentliche Sternschnuppe */
+    (() => {
+        const cv = document.getElementById("sky"), ctx = cv.getContext("2d");
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const LAYERS = [ { n: 260, size: [0.6, 1.1], speed: 0.04, par: 6,  alpha: [0.25, 0.6] },
+                         { n: 120, size: [1.0, 1.7], speed: 0.09, par: 16, alpha: [0.45, 0.85] },
+                         { n: 40,  size: [1.6, 2.6], speed: 0.18, par: 34, alpha: [0.7, 1.0] } ];
+        const TINT = ["255,255,255", "214,236,255", "170,215,255", "127,207,255"];
+        let w = 0, h = 0, dpr = 1, stars = [], mx = 0, my = 0, tx = 0, ty = 0, shoot = null;
+        const rnd = (a, b) => a + Math.random() * (b - a);
+
+        function build() {
+            dpr = Math.min(2, devicePixelRatio || 1); w = innerWidth; h = innerHeight;
+            cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const k = (w * h) / (1920 * 1080);
+            stars = LAYERS.flatMap((L, li) => Array.from({ length: Math.round(L.n * Math.max(.35, k)) }, () => ({
+                li, x: Math.random() * w, y: Math.random() * h, r: rnd(...L.size) / 2, a: rnd(...L.alpha),
+                tw: Math.random() < .15 ? rnd(.6, 2.2) : 0, ph: Math.random() * 6.28, tint: TINT[(Math.random() * TINT.length) | 0],
+            })));
+        }
+        addEventListener("resize", build);
+        addEventListener("pointermove", (e) => { tx = (e.clientX / w - .5) * 2; ty = (e.clientY / h - .5) * 2; });
+
+        function frame(t) {
+            mx += (tx - mx) * .04; my += (ty - my) * .04;               // weich nachziehen
+            const sy = scrollY;
+            ctx.clearRect(0, 0, w, h);
+            for (const s of stars) {
+                const L = LAYERS[s.li];
+                if (!reduce) s.x -= L.speed;                              // langsames Driften nach links
+                if (s.x < -4) s.x += w + 8;
+                const px = (s.x - mx * L.par) % (w + 8);
+                let py = (s.y - my * L.par - sy * L.speed * 1.6) % h; if (py < 0) py += h;
+                const a = s.tw ? s.a * (.55 + .45 * Math.sin(t / 1000 * s.tw + s.ph)) : s.a;
+                ctx.fillStyle = `rgba(${s.tint},${a})`;
+                ctx.beginPath(); ctx.arc(px < 0 ? px + w + 8 : px, py, s.r, 0, 6.283); ctx.fill();
+                if (s.li === 2 && s.r > 1.1) {                            // vordere Ebene: kleiner Glanz
+                    const g = ctx.createRadialGradient(px, py, 0, px, py, s.r * 5);
+                    g.addColorStop(0, `rgba(127,207,255,${a * .35})`); g.addColorStop(1, "rgba(127,207,255,0)");
+                    ctx.fillStyle = g; ctx.fillRect(px - s.r * 5, py - s.r * 5, s.r * 10, s.r * 10);
+                }
+            }
+            // Sternschnuppe etwa alle 6–12 s
+            if (!reduce && !shoot && Math.random() < 1 / 540) shoot = { x: rnd(w * .2, w), y: rnd(0, h * .4), life: 0 };
+            if (shoot) {
+                shoot.life += 1; const p = shoot.life / 45, x = shoot.x - p * 420, y = shoot.y + p * 160;
+                const g = ctx.createLinearGradient(x, y, x + 120, y - 46);
+                g.addColorStop(0, `rgba(255,255,255,${.9 * (1 - p)})`); g.addColorStop(1, "rgba(127,207,255,0)");
+                ctx.strokeStyle = g; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 120, y - 46); ctx.stroke();
+                if (p >= 1) shoot = null;
+            }
+            requestAnimationFrame(frame);
+        }
+        build(); requestAnimationFrame(frame);
+    })();
+    </script>
+    <script>
+    /* Musik & Sounds – gleiches Modul wie im Price Checker (Web Audio, keine Dateien) */
+    const $ = (id) => document.getElementById(id);
+    const Sound = (() => {
+      let ctx = null, master, musicBus, fxBus, reverb, musicOn = false, fxOn = false;
+      let musicNodes = null, chordTimer = 0, pingTimer = 0, computeTimer = 0, computing = 0;
+      // Einstellungen gelten für alle LincolnSoft-Seiten auf dieser Domain (Homestation, Price Checker, Invention Helper)
+      const sget = (k, f) => { try { const v = localStorage.getItem("lincolnsoft.snd." + k) ?? localStorage.getItem("epc.snd." + k); return v == null ? f : JSON.parse(v); } catch { return f; } };
+      const sset = (k, v) => { try { localStorage.setItem("lincolnsoft.snd." + k, JSON.stringify(v)); } catch { /* egal */ } };
+      let vol = Math.min(100, Math.max(0, Number(sget("vol", 45))));
+      const want = { music: !!sget("music", false), fx: !!sget("fx", false) };
+    
+      function ensure() {
+        if (ctx) { if (ctx.state === "suspended") ctx.resume(); return true; }
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return false;
+        ctx = new AC();
+        master = ctx.createGain(); master.gain.value = (vol / 100) ** 2;
+        const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4;
+        master.connect(comp).connect(ctx.destination);
+        reverb = ctx.createConvolver(); reverb.buffer = impulse(4.5, 2.2);
+        const wet = ctx.createGain(); wet.gain.value = .55; reverb.connect(wet).connect(master);
+        musicBus = ctx.createGain(); musicBus.gain.value = 0; musicBus.connect(master); musicBus.connect(reverb);
+        fxBus = ctx.createGain(); fxBus.gain.value = .5; fxBus.connect(master);
+        const fxSend = ctx.createGain(); fxSend.gain.value = .25; fxBus.connect(fxSend).connect(reverb);
+        return true;
+      }
+    
+      function impulse(seconds, decay) {
+        const len = Math.floor(ctx.sampleRate * seconds), buf = ctx.createBuffer(2, len, ctx.sampleRate);
+        for (let c = 0; c < 2; c++) {
+          const d = buf.getChannelData(c);
+          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** decay;
+        }
+        return buf;
+      }
+    
+      // ---- Ambient: langsam wechselnde Flächen in D-Dorisch, Tiefpass mit LFO, vereinzelte Sternen-Pings
+      const CHORDS = [[50, 57, 62, 64, 69], [48, 55, 60, 64, 67], [46, 53, 58, 62, 65], [45, 52, 57, 60, 64]];
+      const hz = (m) => 440 * 2 ** ((m - 69) / 12);
+      let chordIdx = 0;
+    
+      function startMusic() {
+        if (musicNodes) return;
+        const filter = ctx.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = 700; filter.Q.value = .7;
+        const lfo = ctx.createOscillator(), lfoGain = ctx.createGain();
+        lfo.frequency.value = .045; lfoGain.gain.value = 380; lfo.connect(lfoGain).connect(filter.frequency); lfo.start();
+        filter.connect(musicBus);
+        // Grundton-Drohne
+        const drone = ctx.createOscillator(), dg = ctx.createGain();
+        drone.type = "sine"; drone.frequency.value = hz(38); dg.gain.value = .18; drone.connect(dg).connect(filter); drone.start();
+        // 5 Stimmen je 2 leicht verstimmte Oszillatoren
+        const voices = CHORDS[0].map((m) => {
+          const g = ctx.createGain(); g.gain.value = 0; g.connect(filter);
+          const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+          const oscs = [-6, 6].map((cents, k) => {
+            const o = ctx.createOscillator(); o.type = k ? "triangle" : "sine";
+            o.frequency.value = hz(m); o.detune.value = cents;
+            if (pan) { pan.pan.value = Math.random() * 1.2 - .6; o.connect(pan).connect(g); } else o.connect(g);
+            o.start(); return o;
+          });
+          return { g, oscs };
+        });
+        musicNodes = { filter, lfo, drone, voices };
+        musicBus.gain.cancelScheduledValues(ctx.currentTime);
+        musicBus.gain.setValueAtTime(musicBus.gain.value, ctx.currentTime);
+        musicBus.gain.linearRampToValueAtTime(.32, ctx.currentTime + 6);
+        nextChord();
+        chordTimer = setInterval(nextChord, 14000);
+        schedulePing();
+      }
+    
+      function nextChord() {
+        const t = ctx.currentTime, chord = CHORDS[chordIdx++ % CHORDS.length];
+        musicNodes.voices.forEach((v, i) => {
+          v.oscs.forEach((o) => o.frequency.setTargetAtTime(hz(chord[i]), t, 2.5));
+          v.g.gain.setTargetAtTime(.05 + Math.random() * .05, t, 3);
+        });
+      }
+    
+      function schedulePing() {
+        pingTimer = setTimeout(() => {
+          if (!musicNodes) return;
+          const chord = CHORDS[(chordIdx + CHORDS.length - 1) % CHORDS.length];
+          tone(hz(chord[Math.floor(Math.random() * chord.length)] + 24), { type: "sine", gain: .05, attack: .02, release: 3.5, bus: musicBus });
+          schedulePing();
+        }, 5000 + Math.random() * 9000);
+      }
+    
+      function stopMusic() {
+        if (!musicNodes) return;
+        clearInterval(chordTimer); clearTimeout(pingTimer);
+        const n = musicNodes; musicNodes = null;
+        const t = ctx.currentTime;
+        musicBus.gain.cancelScheduledValues(t); musicBus.gain.setValueAtTime(musicBus.gain.value, t);
+        musicBus.gain.linearRampToValueAtTime(0, t + 1.5);
+        setTimeout(() => { [n.lfo, n.drone, ...n.voices.flatMap((v) => v.oscs)].forEach((o) => o.stop()); n.filter.disconnect(); }, 1700);
+      }
+    
+      // ---- Effekte
+      function tone(freq, { type = "sine", gain = .1, attack = .005, release = .12, at = 0, bus = fxBus, slide = 0 } = {}) {
+        const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.setValueAtTime(freq, t);
+        if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + attack + release);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + attack);
+        g.gain.exponentialRampToValueAtTime(.0001, t + attack + release);
+        o.connect(g).connect(bus); o.start(t); o.stop(t + attack + release + .05);
+      }
+    
+      const fxReady = () => fxOn && ensure();
+    
+      function computeStart() {
+        computing++;
+        if (!fxReady() || computeTimer) return;
+        // Rechner-Geplapper: kurze Blips aus einer Pentatonik, leicht gefiltert
+        const scale = [1046, 1174, 1396, 1568, 1760, 2093, 2349];
+        const step = () => {
+          if (!computing || !fxOn) { computeTimer = 0; return; }
+          const n = 1 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < n; i++)
+            tone(scale[Math.floor(Math.random() * scale.length)] * (Math.random() < .2 ? .5 : 1),
+                 { type: Math.random() < .5 ? "square" : "triangle", gain: .028, release: .04 + Math.random() * .04, at: i * .045 });
+          computeTimer = setTimeout(step, 70 + Math.random() * 90);
+        };
+        tone(220, { type: "sawtooth", gain: .03, attack: .02, release: .35, slide: 4 });   // Hochfahren
+        step();
+      }
+    
+      function computeStop(result = "ok") {
+        computing = Math.max(0, computing - 1);
+        if (computing || !fxReady()) return;
+        clearTimeout(computeTimer); computeTimer = 0;
+        if (result === null) return;
+        if (result === "ok") { tone(1318, { gain: .07, release: .25 }); tone(1975, { gain: .06, release: .5, at: .09 }); }
+        else { tone(330, { type: "triangle", gain: .09, release: .3 }); tone(247, { type: "triangle", gain: .09, release: .45, at: .16 }); }
+      }
+    
+      let burstTimer = 0;
+      function burst() {
+        if (!fxReady()) return;
+        if (!burstTimer) computeStart();
+        clearTimeout(burstTimer);
+        burstTimer = setTimeout(() => { burstTimer = 0; computeStop("ok"); }, 380 + Math.random() * 260);
+      }
+    
+      const blip = () => fxReady() && tone(1760, { type: "triangle", gain: .035, release: .05 });
+      const copy = () => { if (!fxReady()) return; [1568, 2093, 2637].forEach((f, i) => tone(f, { type: "square", gain: .03, release: .06, at: i * .06 })); };
+    
+      // ---- Bedienung
+      function paint() {
+        for (const [id, on] of [["snd-music", musicOn], ["snd-fx", fxOn]]) {
+          $(id).classList.toggle("on", on); $(id).setAttribute("aria-pressed", String(on));
+        }
+      }
+      function setMusic(on) {
+        musicOn = on; sset("music", on); paint();
+        if (on) { if (ensure()) startMusic(); } else if (ctx) stopMusic();
+      }
+      function setFx(on) {
+        fxOn = on; sset("fx", on); paint();
+        if (on && ensure()) blip();
+      }
+    
+      $("snd-music").addEventListener("click", () => setMusic(!musicOn));
+      $("snd-fx").addEventListener("click", () => setFx(!fxOn));
+      $("snd-vol").value = vol;
+      $("snd-vol").addEventListener("input", () => {
+        vol = Number($("snd-vol").value); sset("vol", vol);
+        if (ctx) master.gain.setTargetAtTime((vol / 100) ** 2, ctx.currentTime, .05);
+      });
+    
+      // Gespeicherte Wahl: Browser erlauben Ton erst nach einer Interaktion -> beim ersten Klick/Tastendruck starten
+      fxOn = want.fx; musicOn = want.music; paint();
+      if (want.music || want.fx) {
+        const unlock = (ev) => {
+          if (ev.target.closest?.(".header-actions")) return;      // Klick auf die Schalter regelt das selbst
+          removeEventListener("pointerdown", unlock, true); removeEventListener("keydown", unlock, true);
+          if (ensure() && musicOn) startMusic();
+        };
+        addEventListener("pointerdown", unlock, true); addEventListener("keydown", unlock, true);
+      }
+      document.addEventListener("visibilitychange", () => {
+        if (!ctx) return;
+        if (document.hidden && !musicOn) ctx.suspend(); else if (!document.hidden) ctx.resume();
+      });
+    
+      return { computeStart, computeStop, burst, blip, copy, state: () => ({ ctx: ctx?.state ?? "none", music: !!musicNodes, computing, fx: fxOn }) };
+    })();
+    // Homestation: kurze Blips beim Überfahren der Kacheln, Bestätigungston bei Klicks
+    document.addEventListener("pointerover", (e) => {               // per Delegation, damit auch nachgeladene News-Karten klingen
+        const c = e.target.closest(".tool-card:not(.tool-card--empty), .news-card");
+        if (c && !c.contains(e.relatedTarget)) Sound.blip();
+    });
+    document.addEventListener("click", (e) => { if (e.target.closest("a.tool-card, .news-card a, .lang-switch button")) Sound.copy(); });
+    </script>
+
+    <script>
+    /* EVE live: Spieleranzahl von Tranquility (ESI, alle 60 s) und EVE-Zeit (= UTC) */
+    (() => {
+        const box = document.getElementById("eve-live");
+        if (!box) return;
+        const players = box.querySelector(".tq-players"), clock = box.querySelector(".tq-time");
+        const nf = new Intl.NumberFormat("de-DE");
+        const tick = () => { clock.textContent = new Date().toISOString().slice(11, 16); };
+        const load = () => fetch("https://esi.evetech.net/latest/status/?datasource=tranquility", { cache: "no-store" })
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(j => {
+                const n = j.players || 0;
+                box.classList.toggle("up", n > 0); box.classList.toggle("down", n === 0 || !!j.vip);
+                players.textContent = n > 0 ? nf.format(n) + " Piloten" : "offline";
+                box.title = `Tranquility online · Serverversion ${j.server_version || "?"}` + (j.start_time ? ` · seit ${new Date(j.start_time).toISOString().slice(11, 16)} EVE` : "");
+            })
+            .catch(() => {                       // Downtime (ca. 11:00 EVE) oder ESI nicht erreichbar
+                box.classList.remove("up"); box.classList.add("down");
+                players.textContent = "offline"; box.title = "Tranquility / ESI gerade nicht erreichbar (z. B. tägliche Downtime)";
+            });
+        tick(); load();
+        setInterval(tick, 15000);
+        setInterval(() => { if (!document.hidden) load(); }, 60000);
+    })();
+    </script>
+
+    <script>
+    /* Stationslogbuch: neueste 3 Einträge aus changelog.json, aufgefüllt mit den festen Einträgen aus dem HTML */
+    (() => {
+        const list = document.querySelector(".log");
+        if (!list) return;
+        const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+        const fixed = [...list.children].map(li => ({
+            date: li.querySelector("time").getAttribute("datetime"),
+            tag: li.querySelector(".log-tag").textContent,
+            kind: li.querySelector(".log-tag--game") ? "game" : "",
+            text: li.querySelector(".log-text").textContent,
+        }));
+        fetch("changelog.json", { cache: "no-cache" })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(doc => {
+                const live = (doc.entries || []).filter(e => e.date && e.text);
+                if (!live.length) return;
+                const key = e => e.tag + "|" + e.text;
+                const have = new Set(live.map(key));
+                const all = live.concat(fixed.filter(e => !have.has(key(e))))
+                    .sort((a, b) => (b.date > a.date) - (b.date < a.date)).slice(0, 3);
+                list.innerHTML = all.map(e => {
+                    const d = new Date(e.date);
+                    const shown = isNaN(d) ? e.date : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+                    return `<li><time datetime="${esc(e.date)}">${shown}</time>` +
+                        `<span class="log-tag${e.kind === "game" ? " log-tag--game" : ""}">${esc(e.tag)}</span>` +
+                        `<span class="log-text">${esc(e.text)}</span></li>`;
+                }).join("");
+            })
+            .catch(() => {});   // keine Datei / Fehler: feste Einträge bleiben stehen
     })();
     </script>
 </body>

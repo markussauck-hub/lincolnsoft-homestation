@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impressum | Lincolnsoft</title>
+    <meta name="robots" content="noindex">
+    <link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<div class="wrap">
+    <header class="top">
+        <a class="brand" href="/">LINCOLNSOFT</a>
+        <a class="back" href="/">⌂ BACK TO HOMESTATION</a>
+    </header>
+
+    <main class="panel">
+        <h1>Impressum</h1>
+
+        <h2>Angaben gemäß § 5 DDG</h2>
+        <address>
+            Markus Sauck<br>
+            <span class="muted">Postanschrift wird nachgetragen</span>
+        </address>
+
+        <h2>Kontakt</h2>
+        <p>
+            E-Mail: <a href="mailto:kontakt@lincolnsoft.de">kontakt@lincolnsoft.de</a><br>
+            oder über das <a href="#kontakt">Kontaktformular</a> unten.
+        </p>
+
+        <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+        <p>Markus Sauck, Anschrift wie oben.</p>
+
+        <h2>Hinweis zu den News</h2>
+        <p>
+            Die Meldungen in den Rubriken „EVE Online News“ und „RimWorld News“ werden automatisch aus öffentlichen Feeds
+            der jeweiligen Quellen gesammelt; die Kurztexte erzeugt eine KI. Für die verlinkten Originalartikel sind deren
+            Betreiber verantwortlich.
+        </p>
+
+        <h2>Markenhinweis</h2>
+        <p class="muted">
+            EVE Online und alle zugehörigen Namen und Logos sind Marken von CCP ehf. RimWorld ist eine Marke von Ludeon Studios.
+            LincolnSoft ist ein privates Fan-Projekt und steht in keiner Verbindung zu CCP ehf. oder Ludeon Studios.
+        </p>
+    </main>
+
+    <section class="panel" id="kontakt">
+        <h1>Kontaktformular</h1>
+        <form id="kform" novalidate>
+            <div class="row">
+                <label>Name <input name="name" maxlength="100" autocomplete="name" required></label>
+                <label>E-Mail (für die Antwort) <input name="email" type="email" maxlength="200" autocomplete="email" required></label>
+            </div>
+            <label>Nachricht <textarea name="message" maxlength="5000" required></textarea></label>
+            <!-- Honeypot: für Menschen unsichtbar, Bots füllen es aus -->
+            <label class="hp" aria-hidden="true">Website <input name="website" tabindex="-1" autocomplete="off"></label>
+            <p class="muted">
+                Deine Angaben werden nur dazu verwendet, deine Anfrage zu beantworten, und per E-Mail an mich weitergeleitet –
+                auf dem Server wird nichts gespeichert. Details in der <a href="datenschutz.html#kontakt">Datenschutzerklärung</a>.
+            </p>
+            <button class="send" type="submit">NACHRICHT SENDEN</button>
+            <div class="status" role="status" aria-live="polite"></div>
+        </form>
+    </section>
+
+    <footer>
+        <span>© 2026 LINCOLNSOFT</span>
+        <span><a href="impressum.html" aria-current="page">IMPRESSUM</a><a href="datenschutz.html">DATENSCHUTZ</a></span>
+    </footer>
+</div>
+
+<script>
+(() => {
+    const form = document.getElementById("kform");
+    const status = form.querySelector(".status");
+    const btn = form.querySelector(".send");
+    let token = "";
+    const getToken = () => fetch("/api/kontakt/token", { cache: "no-store" })
+        .then(r => r.json()).then(j => {
+            token = j.t;
+            if (j.active === false) say("Hinweis: Das Formular wird gerade eingerichtet – schreib bis dahin bitte an kontakt@lincolnsoft.de.", "err");
+        }).catch(() => {});
+    const say = (msg, cls) => { status.textContent = msg; status.className = "status " + (cls || ""); };
+    getToken();
+
+    form.addEventListener("submit", async e => {
+        e.preventDefault();
+        const d = Object.fromEntries(new FormData(form));
+        if (!d.name.trim() || !/^\S+@\S+\.\S+$/.test(d.email) || d.message.trim().length < 10) {
+            return say("Bitte Name, gültige E-Mail und eine Nachricht (mind. 10 Zeichen) angeben.", "err");
+        }
+        if (!token) await getToken();
+        btn.disabled = true; say("Wird gesendet …");
+        try {
+            const r = await fetch("/api/kontakt", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...d, t: token }),
+            });
+            const j = await r.json().catch(() => ({}));
+            if (r.ok && j.ok) { form.reset(); say("Danke! Deine Nachricht ist unterwegs.", "ok"); getToken(); }
+            else say(j.error || "Senden fehlgeschlagen – bitte später erneut oder per E-Mail.", "err");
+        } catch {
+            say("Keine Verbindung zum Server – bitte später erneut oder per E-Mail.", "err");
+        } finally { btn.disabled = false; }
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+# Lincolnsoft Server – Docker Compose
+# Quelle: Repo lincolnsoft-homestation/deploy/server/docker-compose.yml – deploy/update.sh übernimmt Änderungen
+# automatisch nach ~/server/docker-compose.yml (vorher geprüft, Sicherung als docker-compose.yml.bak).
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./site:/srv/site:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *logging
+
+  # Kontaktformular (Versand über Gmail) + anonymer Aufrufzähler – nur Python-Standardbibliothek
+  api:
+    image: python:3.13-alpine
+    restart: unless-stopped
+    command: ["python", "-u", "/app/kontakt.py"]
+    working_dir: /app
+    volumes:
+      - ../repos/lincolnsoft-homestation/deploy/kontakt:/app:ro
+      - ./data/api:/data
+    env_file: ${HOME}/.config/lincolnsoft/kontakt.env   # legt update.sh leer an, falls sie fehlt
+    logging: *logging
+
+volumes:
+  caddy_data:
+  caddy_config:

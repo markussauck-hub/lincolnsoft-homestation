@@ -12,16 +12,34 @@ Startseite für **https://lincolnsoft.de**, gehostet auf dem Lincolnsoft Server 
 
 ## Deployment
 
-Push auf `main` → spätestens nach einer Minute live.
+Push auf `main` → spätestens nach einer Minute live. `deploy/update.sh` läuft per Cron jede Minute und
+
+1. kopiert bei neuen Commits `site/` nach `~/server/site`,
+2. übernimmt Änderungen an `deploy/server/Caddyfile` und `deploy/server/docker-compose.yml` nach `~/server/`
+   – vorher geprüft (`caddy validate` bzw. `docker compose config`), alte Version als `*.bak`; schlägt die Prüfung
+   oder der Neustart fehl, bleibt bzw. kommt die alte Version zurück (Meldung im Deploy-Log),
+3. startet den Kontakt-Dienst (`api`) neu, wenn sich `deploy/kontakt/` geändert hat,
+4. aktualisiert alle 30 Min. das Stationslogbuch (`deploy/changelog.py`).
 
 Auf dem Server:
 
 - Repo liegt in `~/repos/lincolnsoft-homestation` (Zugriff per read-only Deploy-Key)
-- Cronjob ruft `deploy/update.sh` auf; das Skript macht nur etwas, wenn es neue Commits gibt
 - Log: `~/repos/homestation-deploy.log`
 - Sofort deployen: `~/repos/lincolnsoft-homestation/deploy/update.sh --force`
+- Caddy/Compose also **nur im Repo ändern** – Änderungen direkt in `~/server/` überschreibt der nächste Lauf.
 
 Hinweis: Dateien, die aus `site/` gelöscht werden, bleiben in `~/server/site` liegen und müssen dort von Hand entfernt werden.
+
+## Kontaktformular und Aufrufzähler
+
+Container `api` (`deploy/kontakt/kontakt.py`, Python-Standardbibliothek), Caddy leitet `/api/*` dorthin.
+
+- `/impressum.html` → `POST /api/kontakt` → Mail über Gmail an dich. Nichts wird gespeichert.
+- Spam-Schutz: Honeypot, Mindestzeit 4 s, 3 Nachrichten / 10 Min. pro IP (nur im RAM), 30 / Tag gesamt.
+- Konfiguration: `~/.config/lincolnsoft/kontakt.env` (Vorlage `deploy/kontakt/kontakt.env.example`, `chmod 600`).
+  Ohne `SMTP_PASS` meldet das Formular „noch nicht aktiv – bitte per E-Mail“.
+  Nach dem Eintragen: `cd ~/server && docker compose up -d --force-recreate api`
+- Zähler: `POST /api/zaehler/snake-3` (nur Tageszahl), ansehen: `curl -s https://lincolnsoft.de/api/zaehler`
 
 ## Tools unter lincolnsoft.de
 
@@ -36,7 +54,7 @@ GitHub Pages läuft parallel weiter.
 
 ## News-Bot
 
-`news/news.py` holt stündlich die offiziellen EVE-Feeds (News, Dev-Blogs, Patch Notes), lässt für **neue** Einträge
+`news/news.py` holt alle 3 Stunden für zwei Kanäle (EVE → `news.json`, RimWorld → `news-rimworld.json`) die Feeds (News, Dev-Blogs, Patch Notes), lässt für **neue** Einträge
 von einer KI (Gemini oder Claude, eigener API-Key) kurze Teaser auf Deutsch und Englisch schreiben und legt
 `news.json` in den Webroot. Die Seite lädt sie und zeigt sie im Zeitungsraster (DE/EN-Umschalter).
 

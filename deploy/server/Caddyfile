@@ -1,0 +1,16 @@
+# Lincolnsoft Server – Caddy
+# Quelle: Repo lincolnsoft-homestation/deploy/server/Caddyfile – deploy/update.sh übernimmt Änderungen
+# automatisch nach ~/server/Caddyfile (vorher geprüft, Sicherung als Caddyfile.bak).
+# Kein "log"-Eintrag: Caddy schreibt bewusst KEIN Zugriffsprotokoll.
+
+www.lincolnsoft.de {
+	redir https://lincolnsoft.de{uri} permanent
+}
+
+lincolnsoft.de {
+	# Kontaktformular + Aufrufzähler (Container "api", deploy/kontakt/kontakt.py)
+	reverse_proxy /api/* api:8080
+
+	root * /srv/site
+	file_server
+}
