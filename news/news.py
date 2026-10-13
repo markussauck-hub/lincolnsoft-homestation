@@ -40,6 +40,8 @@ HOME = Path.home()
 DEFAULTS = {
     "NEWS_PROVIDER": "gemini",                       # gemini | claude | none
     "GEMINI_MODEL": "gemini-flash-latest",
+    # Ausweichmodelle, wenn das Hauptmodell überlastet ist (HTTP 503) – mit ";" getrennt, leer = keins
+    "GEMINI_FALLBACK_MODELS": "gemini-flash-lite-latest",
     "CLAUDE_MODEL": "claude-haiku-5-5",
     # Reihenfolge zählt: spezifische Feeds zuerst (bessere Quellen-Bezeichnung), der Sammel-Feed
     # /rss zuletzt als Auffangnetz – doppelte URLs werden zusammengeführt.
@@ -334,10 +336,22 @@ def build_prompt(items, channel="eve"):
 
 
 def ask_gemini(cfg, prompt):
+    """Hauptmodell; ist es überlastet (503), der Reihe nach die Ausweichmodelle."""
+    models = [cfg["GEMINI_MODEL"]] + [m.strip() for m in cfg.get("GEMINI_FALLBACK_MODELS", "").split(";") if m.strip()]
+    for n, model in enumerate(models):
+        try:
+            return ask_gemini_model(cfg, prompt, model)
+        except urllib.error.HTTPError as ex:
+            if ex.code != 503 or n == len(models) - 1:
+                raise
+            log(f"  {model} überlastet (503) – weiche aus auf {models[n + 1]}")
+
+
+def ask_gemini_model(cfg, prompt, model):
     key = cfg.get("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_API_KEY fehlt")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{cfg['GEMINI_MODEL']}:generateContent"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     res = json.loads(http(url, {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"responseMimeType": "application/json", "temperature": 0.4},
