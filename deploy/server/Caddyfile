@@ -4,6 +4,25 @@
 # Kein "log"-Eintrag: Caddy schreibt bewusst KEIN Zugriffsprotokoll.
 
 www.lincolnsoft.de {
+	# Foto-Coach (/fotocoach/): Gemini-Proxy – hängt den Schlüssel aus GEMINI_API_KEY an
+	# (~/.config/lincolnsoft/gemini.env), lässt nur generateContent auf Gemini-Modellen durch, alles andere -> 403
+	handle_path /fotocoach/api/gemini/* {
+		@gemini path_regexp ^/v1beta/models/gemini-[a-z0-9.\-]+:generateContent$
+		handle @gemini {
+			request_body {
+				max_size 25MB
+			}
+			reverse_proxy https://generativelanguage.googleapis.com {
+				header_up x-goog-api-key {env.GEMINI_API_KEY}
+				header_up -Cookie
+				header_up -Referer
+			}
+		}
+		handle {
+			respond 403
+		}
+	}
+
 	redir https://lincolnsoft.de{uri} permanent
 }
 

@@ -28,9 +28,11 @@ sync_compose() {
     cmp -s "$src" "$dst" && return 0
     local h; h="$(sha1sum "$src" | cut -c1-12)"
     [ "$(cat "$STATE/compose.rejected" 2>/dev/null)" = "$h" ] && return 0
-    # Konfig des Kontakt-Dienstes muss existieren (leer = Formular "noch nicht aktiv")
+    # Konfig-Dateien der Dienste müssen existieren (leer = Funktion "noch nicht aktiv")
     mkdir -p "$HOME/.config/lincolnsoft"
     [ -f "$HOME/.config/lincolnsoft/kontakt.env" ] || install -m 600 /dev/null "$HOME/.config/lincolnsoft/kontakt.env"
+    # Gemini-Schlüssel für den Foto-Coach-Proxy in Caddy (leer = Proxy antwortet mit Fehler von Google)
+    [ -f "$HOME/.config/lincolnsoft/gemini.env" ] || install -m 600 /dev/null "$HOME/.config/lincolnsoft/gemini.env"
     cp "$src" "$SERVER/.docker-compose.new.yml"
     if ! (cd "$SERVER" && docker compose -f .docker-compose.new.yml config -q) 2>"$STATE/compose.err"; then
         log "docker-compose.yml NICHT übernommen (Prüfung fehlgeschlagen): $(tr '\n' ' ' < "$STATE/compose.err")"

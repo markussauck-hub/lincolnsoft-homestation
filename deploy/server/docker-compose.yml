@@ -20,6 +20,7 @@ services:
       - ./site:/srv/site:ro
       - caddy_data:/data
       - caddy_config:/config
+    env_file: ${HOME}/.config/lincolnsoft/gemini.env   # GEMINI_API_KEY für den Foto-Coach-Proxy; legt update.sh leer an, falls sie fehlt
     logging: *logging
 
   # Kontaktformular (Versand über Gmail) + anonymer Aufrufzähler – nur Python-Standardbibliothek
