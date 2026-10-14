@@ -4,6 +4,10 @@
 # Kein "log"-Eintrag: Caddy schreibt bewusst KEIN Zugriffsprotokoll.
 
 www.lincolnsoft.de {
+	redir https://lincolnsoft.de{uri} permanent
+}
+
+lincolnsoft.de {
 	# Foto-Coach (/fotocoach/): Gemini-Proxy – hängt den Schlüssel aus GEMINI_API_KEY an
 	# (~/.config/lincolnsoft/gemini.env), lässt nur generateContent auf Gemini-Modellen durch, alles andere -> 403
 	handle_path /fotocoach/api/gemini/* {
@@ -23,10 +27,6 @@ www.lincolnsoft.de {
 		}
 	}
 
-	redir https://lincolnsoft.de{uri} permanent
-}
-
-lincolnsoft.de {
 	# Kontaktformular + Aufrufzähler (Container "api", deploy/kontakt/kontakt.py)
 	reverse_proxy /api/* api:8080
 
