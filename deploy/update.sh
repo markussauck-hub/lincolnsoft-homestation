@@ -121,10 +121,18 @@ main() {
     REMOTE="$(git rev-parse "origin/$BRANCH")"
 
     if [ "$LOCAL" != "$REMOTE" ] || [ "${1:-}" = "--force" ]; then
+        local SELF_BEFORE; SELF_BEFORE="$(sha1sum deploy/update.sh | cut -c1-12)"
         git reset --hard --quiet "origin/$BRANCH"
         mkdir -p "$TARGET"
         cp -a site/. "$TARGET/"
         log "deployed $(git rev-parse --short HEAD): $(git log -1 --pretty=%s)"
+        # update.sh selbst geändert? Dann den Rest (Compose, Caddy …) gleich mit dem NEUEN Code erledigen –
+        # sonst läuft dieser Durchgang noch mit der alten, bereits eingelesenen Version.
+        if [ -z "${UPDATE_REEXEC:-}" ] && [ "$(sha1sum deploy/update.sh | cut -c1-12)" != "$SELF_BEFORE" ]; then
+            log "update.sh geändert – mache mit der neuen Version weiter"
+            exec 9>&-
+            UPDATE_REEXEC=1 exec "$REPO/deploy/update.sh"
+        fi
     fi
 
     # Server-Konfiguration: erst Container (der Kontakt-Dienst muss existieren), dann Caddy
