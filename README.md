@@ -61,6 +61,18 @@ Container `api` (`deploy/kontakt/kontakt.py`, Python-Standardbibliothek), Caddy 
 `deploy/sync-tool.sh <repo> <pfad>` spiegelt den Branch `deploy` nach `~/server/site/<pfad>` (Cron, jede Minute).
 GitHub Pages läuft parallel weiter.
 
+## Foto-Coach (Gemini-Proxy)
+
+Die Web-App unter `/fotocoach/` schickt Fotos zur Motiv-Analyse an Google Gemini. Damit auf den Handys kein
+Schlüssel nötig ist, hängt Caddy ihn serverseitig an: `/fotocoach/api/gemini/v1beta/models/<gemini-…>:generateContent`
+→ `generativelanguage.googleapis.com`. Alles andere unter dem Pfad bekommt 403 (die App erkennt daran den Proxy).
+
+- Schlüssel: `~/.config/lincolnsoft/gemini.env` mit `GEMINI_API_KEY=…` (`chmod 600`, nie ins Repo; legt `update.sh` leer an).
+  Am besten ein Google-Projekt **ohne** Abrechnungskonto – dann kann nichts kosten.
+- Nach dem Eintragen: `cd ~/server && docker compose up -d --force-recreate caddy`
+- Test: `curl -s -o /dev/null -w '%{http_code}\n' https://lincolnsoft.de/fotocoach/api/gemini/ping` → `403`
+- Kein Limit pro Nutzer: wer die URL kennt, nutzt das (kostenlose) Kontingent mit.
+
 ## News-Bot
 
 `news/news.py` holt alle 3 Stunden für zwei Kanäle (EVE → `news.json`, RimWorld → `news-rimworld.json`) die Feeds (News, Dev-Blogs, Patch Notes), lässt für **neue** Einträge
