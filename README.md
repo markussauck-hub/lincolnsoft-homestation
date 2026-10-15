@@ -48,9 +48,11 @@ Container `api` (`deploy/kontakt/kontakt.py`, Python-Standardbibliothek), Caddy 
   Ohne `SMTP_PASS` meldet das Formular „noch nicht aktiv – bitte per E-Mail“.
   Nach dem Eintragen: `cd ~/server && docker compose up -d --force-recreate api`
 - Zähler: `POST /api/zaehler/snake-3` (nur Tageszahl), ansehen: `curl -s https://lincolnsoft.de/api/zaehler`
-- Feedback aus den Tools: `POST /api/feedback` (derzeit nur `app: "fotocoach"`), Art Fehler/Idee/Lob/Sonstiges,
-  Name und E-Mail freiwillig, optional technische Angaben. Gleicher Spam-Schutz und dasselbe Limit wie das Kontaktformular.
-  Empfänger: `FEEDBACK_TO` in `kontakt.env` (leer = `MAIL_TO`). Nach Änderung: `cd ~/server && docker compose up -d --force-recreate api`
+- Feedback aus den Tools: `POST /api/feedback` (derzeit nur `app: "fotocoach"`) legt jede Nachricht als Textdatei ab:
+  `~/server/data/api/feedback/fotocoach/JJJJ-MM-TT_HHMMSS_<art>.txt` – keine Mail, keine Zugangsdaten nötig.
+  Art Fehler/Idee/Lob/Sonstiges, Name/E-Mail freiwillig, optional technische Angaben. Spam-Schutz wie beim Kontaktformular,
+  eigenes Limit (5 / 10 Min. pro IP, 200 / Tag, max. 5000 Dateien).
+  Lesen: `ls ~/server/data/api/feedback/fotocoach/` und `cat …`, alles am Stück: `tail -n +1 ~/server/data/api/feedback/fotocoach/*.txt`
 
 ## Tools unter lincolnsoft.de
 
