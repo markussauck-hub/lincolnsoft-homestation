@@ -7,6 +7,7 @@ für die Sperre gegen Massen-Anfragen.
 
     GET  /api/kontakt/token   -> {"t": "..."}   signierter Zeitstempel (Formular holt ihn beim Laden)
     POST /api/kontakt         -> {"ok": true} oder {"ok": false, "error": "..."}
+    GET  /api/feedback/ansicht -> passwortgeschützte Übersicht fürs Handy (feedback_ansicht.py, FEEDBACK_ADMIN_PASS)
     POST /api/feedback        -> Tester-Feedback aus den Tools (z. B. Foto-Coach), wird als Textdatei abgelegt:
                                  DATA_DIR/feedback/<tool>/JJJJ-MM-TT_HHMMSS_<art>.txt  (Host: ~/server/data/api/feedback/)
                                  braucht keine Mail-Zugangsdaten
@@ -36,6 +37,8 @@ from collections import defaultdict, deque
 from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
+
+import feedback_ansicht
 
 # Deutsche Zeit für Logs, Zähler und Feedback-Dateien – als POSIX-Regel, das Alpine-Image hat keine Zeitzonen-Datenbank
 os.environ.setdefault("TZ", "CET-1CEST,M3.5.0,M10.5.0/3")
@@ -225,8 +228,15 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def client_ip(self):
+        return (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
+
     def do_GET(self):
-        path = self.path.split("?")[0]
+        path, _, query = self.path.partition("?")
+        if path == feedback_ansicht.PATH:
+            if feedback_ansicht.check_auth(self, self.client_ip()):
+                feedback_ansicht.show(self, DATA_DIR, "fotocoach", FEEDBACK_APPS["fotocoach"], query)
+            return
         if path == "/api/kontakt/token":
             return self.reply(200, {"t": make_token(), "active": bool(SMTP_PASS) or DRY_RUN})
         if path == "/api/zaehler":
@@ -235,6 +245,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?")[0]
+        if path == feedback_ansicht.PATH:
+            if feedback_ansicht.check_auth(self, self.client_ip()):
+                n = int(self.headers.get("Content-Length") or 0)
+                if 0 < n <= 4000:
+                    feedback_ansicht.act(self, DATA_DIR, "fotocoach", self.rfile.read(n))
+                else:
+                    self.reply(400, {"ok": False})
+            return
         if path.startswith("/api/zaehler/"):
             name = path.rsplit("/", 1)[1]
             if name not in COUNTERS:
