@@ -7,7 +7,9 @@ für die Sperre gegen Massen-Anfragen.
 
     GET  /api/kontakt/token   -> {"t": "..."}   signierter Zeitstempel (Formular holt ihn beim Laden)
     POST /api/kontakt         -> {"ok": true} oder {"ok": false, "error": "..."}
-    POST /api/feedback        -> Tester-Feedback aus den Tools (z. B. Foto-Coach); Name/E-Mail freiwillig
+    POST /api/feedback        -> Tester-Feedback aus den Tools (z. B. Foto-Coach), wird als Textdatei abgelegt:
+                                 DATA_DIR/feedback/<tool>/JJJJ-MM-TT_HHMMSS_<art>.txt  (Host: ~/server/data/api/feedback/)
+                                 braucht keine Mail-Zugangsdaten
     POST /api/zaehler/<name>  -> zählt einen Aufruf (z. B. snake-3); nur Tageszahl, keine IP, kein Cookie
     GET  /api/zaehler         -> {"snake-3": {"2026-10-13": 12, ...}}
 
@@ -19,7 +21,6 @@ Konfiguration per Umgebung (docker compose env_file):
     SMTP_PASS   Google-App-Passwort (leer = Formular meldet "noch nicht aktiv")
     DRY_RUN     1 = Testmodus: Mail wird nur ins Log geschrieben, nicht gesendet
     MAIL_TO     Empfänger (Standard: SMTP_USER)
-    FEEDBACK_TO Empfänger für /api/feedback (Standard: MAIL_TO)
     SECRET      zufälliger Schlüssel für die Zeitstempel (z. B. `openssl rand -hex 32`)
     DAILY_MAX   Nachrichten pro Tag gesamt (Standard 30)
 """
@@ -36,10 +37,13 @@ from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
 
+# Deutsche Zeit für Logs, Zähler und Feedback-Dateien – als POSIX-Regel, das Alpine-Image hat keine Zeitzonen-Datenbank
+os.environ.setdefault("TZ", "CET-1CEST,M3.5.0,M10.5.0/3")
+time.tzset()
+
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 MAIL_TO = os.environ.get("MAIL_TO") or SMTP_USER
-FEEDBACK_TO = os.environ.get("FEEDBACK_TO") or MAIL_TO
 SECRET = (os.environ.get("SECRET") or os.urandom(32).hex()).encode()
 DAILY_MAX = int(os.environ.get("DAILY_MAX", "30"))
 PORT = int(os.environ.get("PORT", "8080"))
@@ -48,6 +52,8 @@ DATA_DIR = os.environ.get("DATA_DIR", "/data")
 COUNTERS = {"snake-3"}                            # erlaubte Zähler
 FEEDBACK_APPS = {"fotocoach": "Foto-Coach"}       # Tools, die /api/feedback nutzen dürfen
 FEEDBACK_KINDS = {"fehler": "Fehler", "idee": "Idee", "lob": "Lob", "sonstiges": "Sonstiges"}
+FEEDBACK_PER_IP, FEEDBACK_DAILY = 5, 200          # eigenes Limit, unabhängig vom Kontaktformular
+FEEDBACK_MAX_FILES = 5000                         # Schutz gegen volllaufende Platte
 KEEP_DAYS = 400
 
 MIN_SECONDS, MAX_SECONDS = 4, 2 * 3600          # Formular frühestens nach 4 s, spätestens nach 2 h absenden
@@ -147,26 +153,60 @@ def send(name, email, message):
         s.send_message(msg)
 
 
-def send_feedback(app, kind, message, name, email, tech):
-    msg = EmailMessage()
-    who = name or "anonym"
-    msg["Subject"] = f"[{FEEDBACK_APPS[app]}] Feedback: {FEEDBACK_KINDS[kind]} – {who}"
-    msg["From"] = f"Lincolnsoft Feedback <{SMTP_USER or 'kontakt@lincolnsoft.de'}>"
-    msg["To"] = FEEDBACK_TO or "kontakt@lincolnsoft.de"
-    if email:
-        msg["Reply-To"] = email
-    body = (f"Tool:   {FEEDBACK_APPS[app]}\nArt:    {FEEDBACK_KINDS[kind]}\nName:   {name or '–'}\nE-Mail: {email or '–'}\n\n"
-            f"{message}\n")
-    if tech:
-        body += f"\n--- Technische Angaben ---\n{tech}\n"
-    body += "\n-- \nGesendet über den Feedback-Knopf auf lincolnsoft.de\n"
-    msg.set_content(body)
-    if DRY_RUN:
-        log("TESTMODUS – diese Mail würde gesendet:\n" + msg.as_string())
-        return
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context(), timeout=20) as s:
-        s.login(SMTP_USER, SMTP_PASS)
-        s.send_message(msg)
+fb_recent = defaultdict(deque)                    # IP -> Zeitpunkte (nur Arbeitsspeicher)
+fb_day = {"date": "", "count": 0}
+
+
+def allow_feedback(ip):
+    now = time.time()
+    with lock:
+        q = fb_recent[ip]
+        while q and now - q[0] > PER_IP_WINDOW:
+            q.popleft()
+        for k in [k for k, v in fb_recent.items() if not v]:
+            del fb_recent[k]
+        today = time.strftime("%Y-%m-%d")
+        if fb_day["date"] != today:
+            fb_day.update(date=today, count=0)
+        if len(q) >= FEEDBACK_PER_IP or fb_day["count"] >= FEEDBACK_DAILY:
+            return False
+        q.append(now)
+        fb_recent[ip] = q
+        fb_day["count"] += 1
+        return True
+
+
+def save_feedback(app, kind, message, name, email, tech):
+    """Legt das Feedback als Textdatei ab. Ordner/Dateien für alle beschreibbar bzw. lesbar,
+    damit der Nutzer auf dem Host sie ohne sudo lesen und löschen kann (Container läuft als root)."""
+    folder = os.path.join(DATA_DIR, "feedback", app)
+    with lock:
+        os.makedirs(folder, exist_ok=True)
+        for d in (os.path.join(DATA_DIR, "feedback"), folder):
+            try:
+                os.chmod(d, 0o777)
+            except OSError:
+                pass
+        if len(os.listdir(folder)) >= FEEDBACK_MAX_FILES:
+            raise OSError("zu viele Feedback-Dateien")
+        stamp = time.strftime("%Y-%m-%d_%H%M%S")
+        path = os.path.join(folder, f"{stamp}_{kind}.txt")
+        n = 2
+        while os.path.exists(path):
+            path = os.path.join(folder, f"{stamp}_{kind}_{n}.txt")
+            n += 1
+        text = (f"Tool:   {FEEDBACK_APPS[app]}\n"
+                f"Zeit:   {time.strftime('%d.%m.%Y %H:%M:%S')}\n"
+                f"Art:    {FEEDBACK_KINDS[kind]}\n"
+                f"Name:   {name or '–'}\n"
+                f"E-Mail: {email or '–'}\n"
+                f"\n{message}\n")
+        if tech:
+            text += f"\n--- Technische Angaben ---\n{tech}\n"
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.chmod(path, 0o666)
+    return os.path.basename(path)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -214,6 +254,18 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError):
             return self.reply(400, {"ok": False, "error": "Ungültige Anfrage."})
 
+        if path == "/api/feedback":                # braucht keinen Mailversand
+            if clean(data.get("website"), 200):
+                log("Feedback verworfen: Honeypot")
+                return self.reply(200, {"ok": True})
+            age = token_age(data.get("t"))
+            if age is None or age > MAX_SECONDS:
+                return self.reply(400, {"ok": False, "error": "Formular abgelaufen – bitte nochmal öffnen."})
+            if age < MIN_SECONDS:
+                log("Feedback verworfen: zu schnell")
+                return self.reply(200, {"ok": True})
+            return self.feedback(data)
+
         if not SMTP_PASS and not DRY_RUN:
             return self.reply(503, {"ok": False, "error": "Das Formular ist noch nicht aktiv – bitte schreib an kontakt@lincolnsoft.de."})
         if clean(data.get("website"), 200):        # Honeypot ausgefüllt -> Bot; so tun, als hätte es geklappt
@@ -225,9 +277,6 @@ class Handler(BaseHTTPRequestHandler):
         if age < MIN_SECONDS:
             log("verworfen: zu schnell")
             return self.reply(200, {"ok": True})
-
-        if path == "/api/feedback":
-            return self.feedback(data)
 
         name = clean(data.get("name"), 100).replace("\n", " ")
         email = clean(data.get("email"), 200).replace("\n", "")
@@ -260,14 +309,14 @@ class Handler(BaseHTTPRequestHandler):
         if email and not EMAIL_RE.match(email):
             return self.reply(422, {"ok": False, "error": "Die E-Mail-Adresse sieht nicht gültig aus – oder lass das Feld leer."})
         ip = (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
-        if not allow(ip):
+        if not allow_feedback(ip):
             return self.reply(429, {"ok": False, "error": "Gerade zu viele Nachrichten – bitte später noch einmal."})
         try:
-            send_feedback(app, kind, message, name, email, tech)
+            fname = save_feedback(app, kind, message, name, email, tech)
         except Exception as e:                    # Inhalt landet nie im Log, nur der Fehler
-            log(f"Feedback-Versand fehlgeschlagen: {type(e).__name__}: {e}")
-            return self.reply(502, {"ok": False, "error": "Versand gerade nicht möglich – bitte später erneut."})
-        log(f"Feedback gesendet ({app})")
+            log(f"Feedback nicht gespeichert: {type(e).__name__}: {e}")
+            return self.reply(502, {"ok": False, "error": "Speichern gerade nicht möglich – bitte später erneut."})
+        log(f"Feedback gespeichert: {app}/{fname}")
         self.reply(200, {"ok": True})
 
 
