@@ -53,6 +53,9 @@ Container `api` (`deploy/kontakt/kontakt.py`, Python-Standardbibliothek), Caddy 
   Art Fehler/Idee/Lob/Sonstiges, Name/E-Mail freiwillig, optional technische Angaben. Spam-Schutz wie beim Kontaktformular,
   eigenes Limit (5 / 10 Min. pro IP, 200 / Tag, max. 5000 Dateien).
   Lesen: `ls ~/server/data/api/feedback/fotocoach/` und `cat …`, alles am Stück: `tail -n +1 ~/server/data/api/feedback/fotocoach/*.txt`
+- Feedback-Übersicht fürs Handy: **https://lincolnsoft.de/api/feedback/ansicht** – Basic-Auth mit `FEEDBACK_ADMIN_USER`/`FEEDBACK_ADMIN_PASS`
+  aus `kontakt.env` (leeres Passwort = abgeschaltet). Filter offen/erledigt und nach Art; „Erledigt“ verschiebt nach `…/fotocoach/erledigt/`,
+  gelöscht wird nur dort. 10 Fehlversuche pro IP in 10 Min., danach Sperre.
 
 ## Tools unter lincolnsoft.de
 
