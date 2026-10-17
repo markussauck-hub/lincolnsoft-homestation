@@ -65,6 +65,7 @@ Container `api` (`deploy/kontakt/kontakt.py`, Python-Standardbibliothek), Caddy 
 | `/invention-helper/` | markussauck-hub/eve-invention-helper | Branch `deploy` (von der GitHub Action gebaut) |
 | `/pi-planner/` | markussauck-hub/eve-pi-planner | Branch `deploy` (von der GitHub Action gebaut) |
 | `/snake-3/` | markussauck-hub/snake-3-play | Branch `main` (fertiger Unity-WebGL-Build) – `BRANCH=main` im Cronjob |
+| `/fotocoach/` | markussauck-hub/fotocoach | Branch `main` (statische Seite, kein Build) – `BRANCH=main` im Cronjob |
 
 `deploy/sync-tool.sh <repo> <pfad>` spiegelt den Branch `deploy` nach `~/server/site/<pfad>` (Cron, jede Minute).
 GitHub Pages läuft parallel weiter.
