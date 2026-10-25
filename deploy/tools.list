@@ -1,0 +1,8 @@
+# Lincolnsoft Server – Tools, die deploy/update.sh (Cron, jede Minute) per sync-tool.sh spiegelt.
+# Neues Tool: Zeile ergänzen, auf main mergen -> spätestens nach 1–2 Minuten unter lincolnsoft.de/<pfad>/ live.
+# Format: <github-repo> <pfad> [branch]   (Standard-Branch: deploy)
+#
+# Price Checker, Invention Helper, PI Planner und Snake 3 laufen (noch) über eigene Cron-Zeilen;
+# sie hier einzutragen schadet nicht (sync-tool.sh sperrt Parallelläufe), dann können die Cron-Zeilen weg.
+
+markussauck-hub/eve-asset-radar asset-radar
