@@ -7,6 +7,7 @@
 #   4. alle 30 Min. das Stationslogbuch (changelog.json) aktualisieren
 #   4b. stündlich die Gratis-Spiele (free-games.json) aktualisieren
 #   5. RimWorld-News einmalig sofort holen, solange es news-rimworld.json noch nicht gibt
+#   6. Tools aus deploy/tools.list per sync-tool.sh spiegeln (z. B. /asset-radar/)
 #
 #   update.sh           normaler Lauf
 #   update.sh --force   site/ auf jeden Fall kopieren
@@ -142,6 +143,18 @@ main() {
     changelog
     freegames
     rimworld_first_run
+    sync_tools
+}
+
+# Tools aus deploy/tools.list spiegeln – im Hintergrund, damit ein langsamer GitHub-Abruf den Deploy nicht aufhält.
+# sync-tool.sh sperrt selbst gegen Parallelläufe und kopiert nur, wenn es einen neuen Stand gibt.
+sync_tools() {
+    local list="$REPO/deploy/tools.list" repo path branch
+    [ -f "$list" ] || return 0
+    while read -r repo path branch _; do
+        case "$repo" in ''|'#'*) continue ;; esac
+        BRANCH="${branch:-deploy}" nohup "$REPO/deploy/sync-tool.sh" "$repo" "$path" >> "$HOME/repos/sync-tools.log" 2>&1 &
+    done < "$list"
 }
 
 # Alles steht in Funktionen: Bash liest die Datei vollständig ein, bevor etwas läuft –
