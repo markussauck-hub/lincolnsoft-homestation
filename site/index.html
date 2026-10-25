@@ -474,6 +474,9 @@
         .tool-card--photo:hover { border-color: #b98cff; box-shadow: 0 0 12px rgba(185, 140, 255, 0.35); }
         .tool-card--photo .tool-badge { color: #b98cff; border-color: rgba(185, 140, 255, 0.5); }
         .tool-card--photo .tool-note { color: #b98cff; }
+        /* neues EVE-Tool: Badge/Hinweis im Cyan der EVE-Tools */
+        .tool-card--eve-new .tool-badge { color: var(--eve-cyan); border-color: rgba(0, 240, 255, 0.5); }
+        .tool-card--eve-new .tool-note { color: var(--eve-cyan); }
 
         .tool-name {
             color: #ffffff;
@@ -823,6 +826,12 @@
                     <span class="tool-name">EVE PI Planner</span>
                     <span class="tool-desc">Lohnende PI-Ketten, Planeten &amp; Kolonie-Countdown</span>
                 </a>
+                <a href="/asset-radar/" class="tool-card tool-card--eve-new">
+                    <span class="tool-badge">NEU · BETA</span>
+                    <span class="tool-name">EVE Asset Radar</span>
+                    <span class="tool-desc">Dein Inventar auf allen Stationen – welche Items sind gerade im Preis gestiegen?</span>
+                    <span class="tool-note">🔑 Braucht EVE-Login (nur Lesezugriff)</span>
+                </a>
                 <a href="/snake-3/" class="tool-card tool-card--game">
                     <span class="tool-badge">ALPHA · SPIEL</span>
                     <span class="tool-name">GTA VII Entwickler zittern vor diesem neuen Spiel!</span>
@@ -847,7 +856,7 @@
                     <span class="tool-note">📱 Nur auf dem Handy sinnvoll – braucht die Kamera</span>
                 </a>
                 <div class="tool-card tool-card--empty" aria-hidden="true">
-                    <span class="tool-name">Andockplätze 07+</span>
+                    <span class="tool-name">Andockplätze 09+</span>
                     <span class="tool-desc">frei – weitere Module in Planung</span>
                 </div>
             </div>
