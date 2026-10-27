@@ -746,7 +746,7 @@
         }
 
         /* ===== Breitbild (Monitore im Querformat): zweispaltig, ganze Breite =====
-           Kopf | Banner + Logbuch | Tools | EVE-News + RimWorld-News | Footer */
+           Kopf | Banner + Logbuch | Tools | Spiele | EVE-News + RimWorld-News | Footer */
         @media (min-width: 1400px) and (orientation: landscape) {
             .container {
                 max-width: min(1880px, 96vw);
@@ -756,6 +756,7 @@
                     "head  head"
                     "uc    log"
                     "tools tools"
+                    "games games"
                     "eve   rim"
                     "foot  foot";
                 gap: 1.5rem;
@@ -766,6 +767,7 @@
             .container > .construction { grid-area: uc; align-self: stretch; }
             .container > .log-panel { grid-area: log; align-self: stretch; }
             .container > #tools { grid-area: tools; }
+            .container > #games { grid-area: games; }
             .container > #news { grid-area: eve; }
             .container > #news-rimworld { grid-area: rim; }
             .container > footer { grid-area: foot; }
