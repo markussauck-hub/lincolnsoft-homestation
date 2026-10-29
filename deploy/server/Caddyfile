@@ -27,6 +27,11 @@ lincolnsoft.de {
 		}
 	}
 
+	# Steelrumble: Spielverbindung (WebSocket) zum Container "steelrumble", Web-Version komprimiert ausliefern
+	reverse_proxy /steelrumble/ws steelrumble:24556
+	@steelrumble path /steelrumble/*
+	encode @steelrumble zstd gzip
+
 	# Kontaktformular + Aufrufzähler (Container "api", deploy/kontakt/kontakt.py)
 	reverse_proxy /api/* api:8080
 
