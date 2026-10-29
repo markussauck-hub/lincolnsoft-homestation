@@ -73,6 +73,16 @@ GitHub Pages läuft parallel weiter.
 Neue Tools brauchen keine eigene Cron-Zeile mehr: Eintrag in `deploy/tools.list` (`<repo> <pfad> [branch]`), auf `main` mergen –
 `deploy/update.sh` ruft dann jede Minute `sync-tool.sh` dafür auf (Log: `~/repos/sync-tools.log`).
 
+## Steelrumble (Mech-Gefecht, Mehrspieler)
+
+- Web-Version unter `/steelrumble/` – Branch `deploy` von markussauck-hub/steelrumble über `deploy/tools.list`.
+- Spielserver: Container `steelrumble` (`deploy/steelrumble/`, Godot ohne Grafik). Er startet die `index.pck`
+  aus `~/server/site/steelrumble/` und startet von selbst neu, wenn eine neue Version ankommt.
+- Caddy leitet `wss://lincolnsoft.de/steelrumble/ws` an den Container weiter (Port 24556, nur intern).
+- Log: `cd ~/server && docker compose logs --tail 50 steelrumble`
+- Godot-Version im Image ändern: `GODOT_VERSION` in `deploy/steelrumble/Dockerfile`, dann
+  `cd ~/server && docker compose build steelrumble && docker compose up -d steelrumble`.
+
 ## Foto-Coach (Gemini-Proxy)
 
 Die Web-App unter `/fotocoach/` schickt Fotos zur Motiv-Analyse an Google Gemini. Damit auf den Handys kein

@@ -6,3 +6,4 @@
 # sie hier einzutragen schadet nicht (sync-tool.sh sperrt Parallelläufe), dann können die Cron-Zeilen weg.
 
 markussauck-hub/eve-asset-radar asset-radar
+markussauck-hub/steelrumble steelrumble

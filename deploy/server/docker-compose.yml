@@ -35,6 +35,16 @@ services:
     env_file: ${HOME}/.config/lincolnsoft/kontakt.env   # legt update.sh leer an, falls sie fehlt
     logging: *logging
 
+  # Steelrumble – dedizierter Spielserver (WebSocket auf 24556, nur intern; Caddy leitet /steelrumble/ws hierher)
+  # Spielt die index.pck aus ./site/steelrumble (Branch "deploy" von markussauck-hub/steelrumble, siehe tools.list)
+  steelrumble:
+    build: ../repos/lincolnsoft-homestation/deploy/steelrumble
+    image: lincolnsoft/steelrumble-server
+    restart: unless-stopped
+    volumes:
+      - ./site:/site:ro
+    logging: *logging
+
 volumes:
   caddy_data:
   caddy_config:
