@@ -39,10 +39,12 @@ services:
   # Spielt die index.pck aus ./site/steelrumble (Branch "deploy" von markussauck-hub/steelrumble, siehe tools.list)
   steelrumble:
     build: ../repos/lincolnsoft-homestation/deploy/steelrumble
-    image: lincolnsoft/steelrumble-server
+    image: lincolnsoft/steelrumble-server:2   # Tag erhöhen, wenn sich deploy/steelrumble ändert – dann baut "up -d" neu
     restart: unless-stopped
     volumes:
       - ./site:/site:ro
+      - ./data/steelrumble:/home/game/.local/share/godot   # Vorschlagsboard (Vorschläge, Freigaben) bleibt über Neustarts erhalten
+    env_file: ${HOME}/.config/lincolnsoft/steelrumble.env   # STEELRUMBLE_ADMIN_KEY fürs Board; legt update.sh leer an (leer = keine Freigaben)
     logging: *logging
 
 volumes:

@@ -34,6 +34,9 @@ sync_compose() {
     [ -f "$HOME/.config/lincolnsoft/kontakt.env" ] || install -m 600 /dev/null "$HOME/.config/lincolnsoft/kontakt.env"
     # Gemini-Schlüssel für den Foto-Coach-Proxy in Caddy (leer = Proxy antwortet mit Fehler von Google)
     [ -f "$HOME/.config/lincolnsoft/gemini.env" ] || install -m 600 /dev/null "$HOME/.config/lincolnsoft/gemini.env"
+    # Admin-Schlüssel fürs Steelrumble-Vorschlagsboard (leer = Board ohne Freigaben)
+    [ -f "$HOME/.config/lincolnsoft/steelrumble.env" ] || install -m 600 /dev/null "$HOME/.config/lincolnsoft/steelrumble.env"
+    mkdir -p "$SERVER/data/steelrumble"
     cp "$src" "$SERVER/.docker-compose.new.yml"
     if ! (cd "$SERVER" && docker compose -f .docker-compose.new.yml config -q) 2>"$STATE/compose.err"; then
         log "docker-compose.yml NICHT übernommen (Prüfung fehlgeschlagen): $(tr '\n' ' ' < "$STATE/compose.err")"

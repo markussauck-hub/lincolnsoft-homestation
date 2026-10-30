@@ -12,7 +12,9 @@ RUN apt-get update \
  && rm -rf /tmp/godot /tmp/godot.zip /var/lib/apt/lists/*
 
 COPY run.sh /usr/local/bin/steelrumble-run
-RUN chmod 755 /usr/local/bin/steelrumble-run && useradd -m game
-USER game
+COPY entrypoint.sh /usr/local/bin/steelrumble-entry
+RUN chmod 755 /usr/local/bin/steelrumble-run /usr/local/bin/steelrumble-entry && useradd -m game
 ENV HOME=/home/game
+# Startet als root, übergibt den Datenordner (Volume) an "game" und läuft dann ohne Root-Rechte.
+ENTRYPOINT ["steelrumble-entry"]
 CMD ["steelrumble-run"]

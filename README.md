@@ -80,8 +80,13 @@ Neue Tools brauchen keine eigene Cron-Zeile mehr: Eintrag in `deploy/tools.list`
   aus `~/server/site/steelrumble/` und startet von selbst neu, wenn eine neue Version ankommt.
 - Caddy leitet `wss://lincolnsoft.de/steelrumble/ws` an den Container weiter (Port 24556, nur intern).
 - Log: `cd ~/server && docker compose logs --tail 50 steelrumble`
-- Godot-Version im Image ändern: `GODOT_VERSION` in `deploy/steelrumble/Dockerfile`, dann
-  `cd ~/server && docker compose build steelrumble && docker compose up -d steelrumble`.
+- Godot-Version im Image ändern: `GODOT_VERSION` in `deploy/steelrumble/Dockerfile` und den Image-Tag in
+  `deploy/server/docker-compose.yml` erhöhen – `update.sh` baut das Image dann beim nächsten Abgleich neu.
+- Vorschlagsboard: Spieler reichen Mech-Designs ein, der Spielleiter gibt sie im Spiel frei (Hauptmenü →
+  Vorschlagsboard, mit Admin-Schlüssel). Daten liegen in `~/server/data/steelrumble/` (Volume, bleibt bei Neustarts).
+  Schlüssel setzen (einmalig, danach Container neu starten):
+  `echo "STEELRUMBLE_ADMIN_KEY=$(openssl rand -hex 16)" > ~/.config/lincolnsoft/steelrumble.env && cat ~/.config/lincolnsoft/steelrumble.env`
+  dann `cd ~/server && docker compose up -d steelrumble`. Leere Datei = Board ohne Freigaben.
 
 ## Foto-Coach (Gemini-Proxy)
 
