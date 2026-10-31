@@ -27,8 +27,11 @@ lincolnsoft.de {
 		}
 	}
 
-	# Steelrumble: Spielverbindung (WebSocket) zum Container "steelrumble", Web-Version komprimiert ausliefern
+	# Steelrumble: Spielräume 1–4 (WebSocket) zum Container "steelrumble", Web-Version komprimiert ausliefern
 	reverse_proxy /steelrumble/ws steelrumble:24556
+	reverse_proxy /steelrumble/ws2 steelrumble:24557
+	reverse_proxy /steelrumble/ws3 steelrumble:24558
+	reverse_proxy /steelrumble/ws4 steelrumble:24559
 	@steelrumble path /steelrumble/*
 	encode @steelrumble zstd gzip
 

@@ -35,15 +35,16 @@ services:
     env_file: ${HOME}/.config/lincolnsoft/kontakt.env   # legt update.sh leer an, falls sie fehlt
     logging: *logging
 
-  # Steelrumble – dedizierter Spielserver (WebSocket auf 24556, nur intern; Caddy leitet /steelrumble/ws hierher)
+  # Steelrumble – dedizierter Spielserver, 4 Spielräume (WebSocket auf 24556–24559, nur intern; Caddy leitet
+  # /steelrumble/ws, /ws2, /ws3, /ws4 hierher)
   # Spielt die index.pck aus ./site/steelrumble (Branch "deploy" von markussauck-hub/steelrumble, siehe tools.list)
   steelrumble:
     build: ../repos/lincolnsoft-homestation/deploy/steelrumble
-    image: lincolnsoft/steelrumble-server:2   # Tag erhöhen, wenn sich deploy/steelrumble ändert – dann baut "up -d" neu
+    image: lincolnsoft/steelrumble-server:3   # Tag erhöhen, wenn sich deploy/steelrumble ändert – dann baut "up -d" neu
     restart: unless-stopped
     volumes:
       - ./site:/site:ro
-      - ./data/steelrumble:/home/game/.local/share/godot   # Vorschlagsboard (Vorschläge, Freigaben) bleibt über Neustarts erhalten
+      - ./data/steelrumble:/home/game/.local/share/godot   # Konten, Vorschlagsboard und Raumstatus bleiben über Neustarts erhalten
     env_file: ${HOME}/.config/lincolnsoft/steelrumble.env   # STEELRUMBLE_ADMIN_KEY fürs Board; legt update.sh leer an (leer = keine Freigaben)
     logging: *logging
 
